@@ -1,0 +1,6 @@
+fastapi
+python-dotenv
+langchain
+langchain-community
+faiss-cpu
+ollama
