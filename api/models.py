@@ -3,6 +3,9 @@ from typing import Dict, List, Any, Optional
 
 class ChatRequest(BaseModel):
     user_input: str
+    mode: Optional[str] = "aws_chat"  # "aws_chat" or "requirement_extraction"
+    session_id: Optional[str] = None  # Session ID for MongoDB persistence
+    user_id: Optional[str] = None  # Optional user identifier
 
 class SimpleChatResponse(BaseModel):
     question_analysis: str

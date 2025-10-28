@@ -4,3 +4,6 @@ langchain
 langchain-community
 faiss-cpu
 ollama
+pymongo
+motor
+pydantic[email]
