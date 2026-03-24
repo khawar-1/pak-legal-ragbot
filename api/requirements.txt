@@ -3,7 +3,10 @@ python-dotenv
 langchain
 langchain-community
 faiss-cpu
-ollama
+langchain-google-genai
+google-generativeai
+langchain-huggingface
+langchain-groq
 pymongo
 motor
 pydantic[email]

@@ -6,8 +6,8 @@ import ThemeProvider from "./components/ThemeProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "AWS Cloud Assistant",
-  description: "AI-powered AWS cloud architecture assistant with RAG technology",
+  title: "Legal Case Assistant",
+  description: "AI-powered Pakistan legal case assistant with RAG technology",
 };
 
 export default function RootLayout({

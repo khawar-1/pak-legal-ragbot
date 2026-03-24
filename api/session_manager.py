@@ -17,8 +17,10 @@ class SessionManager:
         self.collection_name = "sessions"
     
     def _get_collection(self):
-        """Get sessions collection"""
+        """Get sessions collection. Returns None if not connected."""
         db = get_database()
+        if db is None:
+            return None
         return db[self.collection_name]
     
     async def create_session(
@@ -43,17 +45,22 @@ class SessionManager:
         
         try:
             collection = self._get_collection()
+            if collection is None:
+                logger.warning(f"Stateless mode: cannot create session {session_id} in MongoDB")
+                return session_id
             await collection.insert_one(session_doc.dict())
             logger.info(f"Created session: {session_id}")
             return session_id
         except Exception as e:
             logger.error(f"Error creating session: {e}")
-            raise
+            return session_id # Return ID anyway for stateless support
     
     async def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get session from MongoDB"""
         try:
             collection = self._get_collection()
+            if collection is None:
+                return None
             session = await collection.find_one({"session_id": session_id})
             
             if session:
@@ -80,7 +87,17 @@ class SessionManager:
         
         # Create new session
         new_session_id = await self.create_session(session_id, user_id, mode)
-        return await self.get_session(new_session_id)
+        session = await self.get_session(new_session_id)
+        if session:
+            return session
+            
+        # Return a minimal session object for stateless mode
+        return {
+            "session_id": new_session_id,
+            "user_id": user_id,
+            "mode": mode,
+            "chat_history": []
+        }
     
     async def add_message(
         self,
@@ -92,6 +109,9 @@ class SessionManager:
         """Add a message to session chat history"""
         try:
             collection = self._get_collection()
+            if collection is None:
+                logger.debug("Stateless mode: message not saved")
+                return
             
             chat_message = ChatMessage(
                 sender=sender,
@@ -109,30 +129,59 @@ class SessionManager:
             logger.debug(f"Added message to session: {session_id}")
         except Exception as e:
             logger.error(f"Error adding message: {e}")
-            raise
+            # Don't raise, allow flow to continue
     
     async def update_requirements(
         self,
         session_id: str,
-        requirements: Dict[str, Any]
+        requirements: Dict[str, Any],
+        question_retries: Optional[Dict[str, int]] = None
     ):
         """Update extracted requirements for a session"""
         try:
             collection = self._get_collection()
             
+            update_data = {
+                "extracted_requirements": requirements,
+                "last_updated": datetime.now().isoformat()
+            }
+            
+            if question_retries is not None:
+                update_data["question_retries"] = question_retries
+            
             await collection.update_one(
                 {"session_id": session_id},
-                {
-                    "$set": {
-                        "extracted_requirements": requirements,
-                        "last_updated": datetime.now().isoformat()
-                    }
-                }
+                {"$set": update_data}
             )
             logger.debug(f"Updated requirements for session: {session_id}")
         except Exception as e:
             logger.error(f"Error updating requirements: {e}")
             raise
+    
+    async def get_question_retries(self, session_id: str) -> Dict[str, int]:
+        """Get question retry counts for each field"""
+        try:
+            session = await self.get_session(session_id)
+            if not session:
+                return {}
+            return session.get("question_retries", {})
+        except Exception as e:
+            logger.error(f"Error getting question retries: {e}")
+            return {}
+    
+    async def increment_field_retry(self, session_id: str, field: str):
+        """Increment retry count for a specific field"""
+        try:
+            collection = self._get_collection()
+            retries = await self.get_question_retries(session_id)
+            retries[field] = retries.get(field, 0) + 1
+            
+            await collection.update_one(
+                {"session_id": session_id},
+                {"$set": {"question_retries": retries}}
+            )
+        except Exception as e:
+            logger.error(f"Error incrementing retry: {e}")
     
     async def mark_complete(self, session_id: str):
         """Mark session as complete"""

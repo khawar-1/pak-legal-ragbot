@@ -33,3 +33,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+venv/
+env/
+.venv/
+.env
+
+# Large/Private datasets
+ocr_training_dataset.json

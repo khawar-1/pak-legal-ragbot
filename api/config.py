@@ -1,10 +1,18 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv('.env.local')
+# Use absolute path so it's found regardless of working directory
+_env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env.local')
+load_dotenv(_env_path)
 
-# Ollama configuration
-OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-LLAMA_MODEL = os.environ.get("LLAMA_MODEL", "llama3.1:8b")
-EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "nomic-embed-text")
-KNOWLEDGE_BASE_PATH = r"api/data_structure_q_&_a.txt"
+# Groq configuration (free LLM for answer generation)
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+# HuggingFace configuration (free embeddings - no daily quota)
+HUGGINGFACE_API_TOKEN = os.environ.get("HUGGINGFACE_API_TOKEN", "")
+
+# Keep Gemini key for any legacy references
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+
+KNOWLEDGE_BASE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ocr_training_dataset.json")

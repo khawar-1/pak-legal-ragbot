@@ -11,7 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # MongoDB configuration - Using provided Atlas connection string
-MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb+srv://kashan_abbas:NyXPFZLilBNG28Oh@mernapp.1grlr.mongodb.net/?appName=MERNApp")
+MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb+srv://kashan_abbas:kashanabbas@mernapp.1grlr.mongodb.net/?appName=MERNApp")
 DATABASE_NAME = os.environ.get("DATABASE_NAME", "aws_chatbot")
 
 # Global MongoDB client
@@ -72,7 +72,5 @@ async def create_indexes():
         logger.warning(f"Index creation warning: {e}")
 
 def get_database():
-    """Get database instance"""
-    if database is None:
-        raise RuntimeError("Database not connected. Call connect_to_mongo() first.")
+    """Get database instance. Returns None if not connected."""
     return database

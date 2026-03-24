@@ -1,0 +1,217 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.11.0, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\DELL\AppData\Local\Programs\Python\Python311\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Downloads\ragbot\ocr\Chatbot_Module
+plugins: anyio-4.12.0, langsmith-0.6.8, typeguard-4.4.4
+collecting ... collected 162 items
+
+test_rag_unit_tests.py::TestDocumentLoading::test_loader_001_loads_text_file PASSED [  0%]
+test_rag_unit_tests.py::TestDocumentLoading::test_loader_002_returns_list_of_documents PASSED [  1%]
+test_rag_unit_tests.py::TestDocumentLoading::test_loader_003_handles_empty_file PASSED [  1%]
+test_rag_unit_tests.py::TestDocumentLoading::test_loader_004_preserves_content PASSED [  2%]
+test_rag_unit_tests.py::TestDocumentLoading::test_loader_005_handles_multiple_files PASSED [  3%]
+test_rag_unit_tests.py::TestDocumentLoading::test_loader_006_document_type_check PASSED [  3%]
+test_rag_unit_tests.py::TestDocumentLoading::test_loader_007_large_file_handling FAILED [  4%]
+test_rag_unit_tests.py::TestDocumentLoading::test_loader_008_unicode_content PASSED [  4%]
+test_rag_unit_tests.py::TestDocumentLoading::test_loader_009_path_validation PASSED [  5%]
+test_rag_unit_tests.py::TestDocumentLoading::test_loader_010_file_encoding_utf8 PASSED [  6%]
+test_rag_unit_tests.py::TestDocumentLoading::test_loader_011_document_count_accuracy PASSED [  6%]
+test_rag_unit_tests.py::TestDocumentLoading::test_loader_012_content_not_empty PASSED [  7%]
+test_rag_unit_tests.py::TestDocumentLoading::test_loader_013_metadata_preservation PASSED [  8%]
+test_rag_unit_tests.py::TestDocumentLoading::test_loader_014_duplicate_handling PASSED [  8%]
+test_rag_unit_tests.py::TestDocumentLoading::test_loader_015_error_on_invalid_path PASSED [  9%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_001_creates_chunks PASSED [  9%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_002_respects_chunk_size PASSED [ 10%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_003_overlap_preservation PASSED [ 11%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_004_returns_list PASSED [ 11%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_005_chunk_order_preserved PASSED [ 12%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_006_empty_text_handling PASSED [ 12%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_007_single_chunk PASSED [ 13%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_008_large_text_multiple_chunks PASSED [ 14%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_009_no_data_loss PASSED [ 14%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_010_metadata_preserved PASSED [ 15%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_011_separator_handling PASSED [ 16%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_012_unicode_splitting PASSED [ 16%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_013_chunk_content_type PASSED [ 17%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_014_max_chunk_size PASSED [ 17%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_015_overlap_less_than_size PASSED [ 18%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_016_consistent_splitting PASSED [ 19%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_017_special_characters PASSED [ 19%]
+test_rag_unit_tests.py::TestTextSplitting::test_splitter_018_whitespace_handling PASSED [ 20%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_001_gemini_connection PASSED [ 20%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_002_embedding_dimension PASSED [ 21%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_003_float_values PASSED [ 22%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_004_consistent_dimension PASSED [ 22%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_005_normalized_values PASSED [ 23%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_006_non_zero_vectors PASSED [ 24%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_007_vector_magnitude PASSED [ 24%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_008_api_key_set PASSED [ 25%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_009_model_name_set PASSED [ 25%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_010_batch_processing PASSED [ 26%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_011_unicode_text_embedding PASSED [ 27%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_012_long_text_embedding PASSED [ 27%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_013_single_word_embedding PASSED [ 28%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_014_empty_text_handling PASSED [ 29%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_015_similarity_computation PASSED [ 29%]
+test_rag_unit_tests.py::TestEmbeddings::test_embedding_016_model_loading PASSED [ 30%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_001_chroma_initialization PASSED [ 30%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_002_from_documents_method PASSED [ 31%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_003_persist_directory_set PASSED [ 32%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_004_retriever_creation PASSED [ 32%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_005_search_k_parameter PASSED [ 33%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_006_embedding_parameter PASSED [ 33%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_007_documents_parameter PASSED [ 34%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_008_retrieval_returns_list PASSED [ 35%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_009_top_k_results PASSED [ 35%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_010_relevance_scores PASSED [ 36%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_011_persist_functionality PASSED [ 37%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_012_empty_query_handling PASSED [ 37%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_013_long_query_handling PASSED [ 38%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_014_special_chars_in_query PASSED [ 38%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_015_unicode_query PASSED [ 39%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_016_retriever_attributes PASSED [ 40%]
+test_rag_unit_tests.py::TestVectorStore::test_vectorstore_017_search_kwargs_format PASSED [ 40%]
+test_rag_unit_tests.py::TestLLMConfiguration::test_llm_001_gemini_llm_init PASSED [ 41%]
+test_rag_unit_tests.py::TestLLMConfiguration::test_llm_002_api_key_configuration PASSED [ 41%]
+test_rag_unit_tests.py::TestLLMConfiguration::test_llm_003_model_name_configuration PASSED [ 42%]
+test_rag_unit_tests.py::TestLLMConfiguration::test_llm_004_temperature_valid_range PASSED [ 43%]
+test_rag_unit_tests.py::TestLLMConfiguration::test_llm_005_temperature_for_retrieval PASSED [ 43%]
+test_rag_unit_tests.py::TestLLMConfiguration::test_llm_006_temperature_for_analysis PASSED [ 44%]
+test_rag_unit_tests.py::TestLLMConfiguration::test_llm_007_llm_returns_string PASSED [ 45%]
+test_rag_unit_tests.py::TestLLMConfiguration::test_llm_008_empty_prompt_handling PASSED [ 45%]
+test_rag_unit_tests.py::TestLLMConfiguration::test_llm_009_long_prompt_handling PASSED [ 46%]
+test_rag_unit_tests.py::TestLLMConfiguration::test_llm_010_special_chars_in_prompt PASSED [ 46%]
+test_rag_unit_tests.py::TestLLMConfiguration::test_llm_011_unicode_prompt PASSED [ 47%]
+test_rag_unit_tests.py::TestLLMConfiguration::test_llm_012_model_parameters_set PASSED [ 48%]
+test_rag_unit_tests.py::TestLLMConfiguration::test_llm_013_gemini_connectivity PASSED [ 48%]
+test_rag_unit_tests.py::TestLLMConfiguration::test_llm_014_model_availability PASSED [ 49%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_001_template_creation FAILED [ 50%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_002_context_variable_present PASSED [ 50%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_003_question_variable_present PASSED [ 51%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_004_input_variables_list PASSED [ 51%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_005_contains_required_variables PASSED [ 52%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_006_template_string_type PASSED [ 53%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_007_instruction_present PASSED [ 53%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_008_answer_placeholder PASSED [ 54%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_009_template_not_empty PASSED [ 54%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_010_proper_formatting PASSED [ 55%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_011_special_instructions PASSED [ 56%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_012_context_awareness PASSED [ 56%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_013_multiple_variables_supported PASSED [ 57%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_014_variables_are_strings PASSED [ 58%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_015_template_consistency PASSED [ 58%]
+test_rag_unit_tests.py::TestPromptTemplate::test_prompt_016_newline_handling PASSED [ 59%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_001_creation FAILED [ 59%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_002_llm_parameter PASSED [ 60%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_003_chain_type_stuff PASSED [ 61%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_004_retriever_parameter PASSED [ 61%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_005_search_kwargs_k PASSED [ 62%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_006_chain_type_kwargs PASSED [ 62%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_007_prompt_in_kwargs PASSED [ 63%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_008_run_method_exists PASSED [ 64%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_009_run_returns_string PASSED [ 64%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_010_question_parameter PASSED [ 65%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_011_empty_question_handling PASSED [ 66%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_012_long_question_handling PASSED [ 66%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_013_answer_not_empty PASSED [ 67%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_014_answer_contains_context PASSED [ 67%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_015_multiple_queries PASSED [ 68%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_016_retriever_integration PASSED [ 69%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_017_top_k_results PASSED [ 69%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_018_chain_state_independent PASSED [ 70%]
+test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_019_error_handling PASSED [ 70%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_001_llm_creation PASSED [ 71%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_002_temperature_setting PASSED [ 72%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_003_generate_method_call PASSED [ 72%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_004_prompt_formatting PASSED [ 73%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_005_analysis_result_structure PASSED [ 74%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_006_tips_generation PASSED [ 74%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_007_tips_count PASSED [ 75%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_008_analysis_concise PASSED [ 75%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_009_tips_actionable PASSED [ 76%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_010_aws_focused PASSED [ 77%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_011_return_tuple PASSED [ 77%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_012_analysis_text_extraction PASSED [ 78%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_013_tips_text_extraction PASSED [ 79%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_014_multiple_generations PASSED [ 79%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_015_empty_question_handling PASSED [ 80%]
+test_rag_unit_tests.py::TestAnalysisTipsGeneration::test_analysis_016_special_chars_in_question PASSED [ 80%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_001_unicode_query PASSED [ 81%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_002_empty_query PASSED [ 82%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_003_very_long_query FAILED [ 82%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_004_numeric_only_query PASSED [ 83%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_005_special_characters PASSED [ 83%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_006_mixed_case_query PASSED [ 84%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_007_null_document_handling PASSED [ 85%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_008_empty_documents_list PASSED [ 85%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_009_single_document PASSED [ 86%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_010_large_document_count PASSED [ 87%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_011_zero_k_parameter PASSED [ 87%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_012_very_large_k PASSED [ 88%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_013_negative_temperature PASSED [ 88%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_014_temperature_over_one PASSED [ 89%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_015_missing_config_values PASSED [ 90%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_016_none_retrieval_result PASSED [ 90%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_017_empty_retrieval_results PASSED [ 91%]
+test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_018_corrupted_embedding PASSED [ 91%]
+test_rag_unit_tests.py::TestPerformanceIntegration::test_integration_001_load_split_embed PASSED [ 92%]
+test_rag_unit_tests.py::TestPerformanceIntegration::test_integration_002_embed_store_retrieve PASSED [ 93%]
+test_rag_unit_tests.py::TestPerformanceIntegration::test_integration_003_retrieve_prompt_chain PASSED [ 93%]
+test_rag_unit_tests.py::TestPerformanceIntegration::test_integration_004_chain_analysis_tips FAILED [ 94%]
+test_rag_unit_tests.py::TestPerformanceIntegration::test_integration_005_end_to_end_retrieval_flow PASSED [ 95%]
+test_rag_unit_tests.py::TestPerformanceIntegration::test_perf_001_quick_document_load PASSED [ 95%]
+test_rag_unit_tests.py::TestPerformanceIntegration::test_perf_002_chunk_creation_speed PASSED [ 96%]
+test_rag_unit_tests.py::TestPerformanceIntegration::test_perf_003_embedding_creation_speed PASSED [ 96%]
+test_rag_unit_tests.py::TestPerformanceIntegration::test_perf_004_vectorstore_creation PASSED [ 97%]
+test_rag_unit_tests.py::TestPerformanceIntegration::test_perf_005_retrieval_execution PASSED [ 98%]
+test_rag_unit_tests.py::TestPerformanceIntegration::test_perf_006_multiple_sequential_queries PASSED [ 98%]
+test_rag_unit_tests.py::TestPerformanceIntegration::test_perf_007_analysis_generation_speed PASSED [ 99%]
+test_rag_unit_tests.py::TestPerformanceIntegration::test_perf_008_tips_generation_speed PASSED [100%]
+
+================================== FAILURES ===================================
+___________ TestDocumentLoading.test_loader_007_large_file_handling ___________
+test_rag_unit_tests.py:57: in test_loader_007_large_file_handling
+    assert len(doc.page_content) > 50000
+E   AssertionError: assert 50000 > 50000
+E    +  where 50000 = len('test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test te...st test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test ')
+E    +    where 'test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test te...st test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test ' = <Mock id='2163627302224'>.page_content
+____________ TestPromptTemplate.test_prompt_001_template_creation _____________
+test_rag_unit_tests.py:497: in test_prompt_001_template_creation
+    with patch('langchain.prompts.PromptTemplate') as mock_prompt:
+C:\Users\DELL\AppData\Local\Programs\Python\Python311\Lib\unittest\mock.py:1411: in __enter__
+    self.target = self.getter()
+                  ^^^^^^^^^^^^^
+C:\Users\DELL\AppData\Local\Programs\Python\Python311\Lib\pkgutil.py:715: in resolve_name
+    result = getattr(result, p)
+             ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'langchain' has no attribute 'prompts'
+________________ TestRetrievalQAChain.test_chain_001_creation _________________
+test_rag_unit_tests.py:586: in test_chain_001_creation
+    with patch('langchain.chains.RetrievalQA') as mock_chain:
+C:\Users\DELL\AppData\Local\Programs\Python\Python311\Lib\unittest\mock.py:1411: in __enter__
+    self.target = self.getter()
+                  ^^^^^^^^^^^^^
+C:\Users\DELL\AppData\Local\Programs\Python\Python311\Lib\pkgutil.py:715: in resolve_name
+    result = getattr(result, p)
+             ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'langchain' has no attribute 'chains'
+__________ TestEdgeCasesErrorHandling.test_edge_003_very_long_query ___________
+test_rag_unit_tests.py:823: in test_edge_003_very_long_query
+    assert len(query) > 25000
+E   AssertionError: assert 25000 > 25000
+E    +  where 25000 = len('test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test te...st test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test ')
+_____ TestPerformanceIntegration.test_integration_004_chain_analysis_tips _____
+test_rag_unit_tests.py:981: in test_integration_004_chain_analysis_tips
+    assert chain.run.called or llm.generate.called
+E   AssertionError: assert (False or False)
+E    +  where False = <Mock name='mock.run' id='2163672163024'>.called
+E    +    where <Mock name='mock.run' id='2163672163024'> = <Mock id='2163672162768'>.run
+E    +  and   False = <Mock name='mock.generate' id='2163672164816'>.called
+E    +    where <Mock name='mock.generate' id='2163672164816'> = <Mock id='2163672164624'>.generate
+=========================== short test summary info ===========================
+FAILED test_rag_unit_tests.py::TestDocumentLoading::test_loader_007_large_file_handling
+FAILED test_rag_unit_tests.py::TestPromptTemplate::test_prompt_001_template_creation
+FAILED test_rag_unit_tests.py::TestRetrievalQAChain::test_chain_001_creation
+FAILED test_rag_unit_tests.py::TestEdgeCasesErrorHandling::test_edge_003_very_long_query
+FAILED test_rag_unit_tests.py::TestPerformanceIntegration::test_integration_004_chain_analysis_tips
+======================= 5 failed, 157 passed in 12.60s ========================
