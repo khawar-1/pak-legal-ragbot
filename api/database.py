@@ -10,9 +10,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# MongoDB configuration - Using provided Atlas connection string
-MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb+srv://kashan_abbas:kashanabbas@mernapp.1grlr.mongodb.net/?appName=MERNApp")
-DATABASE_NAME = os.environ.get("DATABASE_NAME", "aws_chatbot")
+# MongoDB configuration
+MONGODB_URI = os.environ.get("MONGODB_URI", "")
+DATABASE_NAME = os.environ.get("DATABASE_NAME", "legal_chatbot")
 
 # Global MongoDB client
 mongodb_client: Optional[AsyncIOMotorClient] = None
