@@ -237,7 +237,7 @@ export default function Home() {
   const handleResetSession = async () => {
     try {
       const sessionId = getSessionId();
-      await fetch(`http://localhost:8000/api/session/${sessionId}`, {
+      await fetch(`/api/session/${sessionId}`, {
         method: "DELETE"
       });
       localStorage.removeItem("legal_chat_session_id");
@@ -252,7 +252,7 @@ export default function Home() {
     try {
       const sessionId = getSessionId();
 
-      const res = await fetch("http://localhost:8000/api/chat", {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
