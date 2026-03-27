@@ -134,6 +134,24 @@ def _get_vector_db():
     return vector_db
 
 
+def _is_context_relevant(context: str, user_input: str) -> bool:
+    """
+    Heuristic check: is the retrieved context likely relevant to the query?
+    Returns False if context looks empty or only has generic chunks.
+    """
+    if not context or len(context.strip()) < 100:
+        return False
+
+    # If the query contains a citation-like pattern, check if it appears in the context
+    import re
+    citation_match = re.search(r'\b(?:19|20)\d{2}\s+[A-Z]+\s+\d+\b', user_input, re.IGNORECASE)
+    if citation_match:
+        citation = citation_match.group(0).upper()
+        return citation in context.upper()
+
+    return True  # For general questions, assume context is relevant
+
+
 def retrieval(user_input):
     logger.info("Getting vector DB (will load from disk if available)...")
     vector_db = _get_vector_db()
@@ -141,7 +159,6 @@ def retrieval(user_input):
     logger.info("Retrieving relevant documents for your query...")
 
     # EXACT MATCH HEURISTIC: Find cases where the journal is exactly in the query
-    # OPTIMIZATION 3: exact match cap reduced 4 → 2
     exact_match_docs = []
     query_upper = user_input.upper()
 
@@ -151,10 +168,9 @@ def retrieval(user_input):
             if journal and journal in query_upper:
                 exact_match_docs.append(doc)
 
-    exact_match_docs = exact_match_docs[:2]  # was 4
+    exact_match_docs = exact_match_docs[:2]
 
-    # OPTIMIZATION 3: Semantic top_k reduced 6 → 3
-    retriever = vector_db.as_retriever(search_kwargs={"k": 3})  # was 6
+    retriever = vector_db.as_retriever(search_kwargs={"k": 3})
     semantic_docs = retriever.invoke(user_input)
 
     # Combine exact matches and semantic matches, removing duplicates
@@ -165,17 +181,25 @@ def retrieval(user_input):
             all_docs.append(doc)
             seen_content.add(doc.page_content)
 
-    # OPTIMIZATION 3: Final chunk cap reduced 8 → 4
-    relevant_docs = all_docs[:4]  # was 8
+    relevant_docs = all_docs[:4]
 
     # Format context from documents
     context = "\n\n".join([doc.page_content for doc in relevant_docs])
     if len(context) > MAX_CONTEXT_CHARS:
         context = context[:MAX_CONTEXT_CHARS] + "\n\n[Context truncated]"
 
-    # OPTIMIZATION 4: Shorter, tighter prompt (saves ~50 tokens every request)
-    # Old prompt was verbose with 4 numbered instructions repeated on every call
-    prompt = f"""You are a Pakistan legal assistant. Answer ONLY from the context below.
+    llm = ChatGroq(
+        api_key=GROQ_API_KEY,
+        model=GROQ_MODEL,
+        temperature=0.0,
+        max_tokens=400,
+    )
+
+    # HYBRID RAG: Check if retrieved context is actually relevant to the question.
+    # If not, fall back to LLM's own knowledge with a clear disclaimer.
+    if _is_context_relevant(context, user_input):
+        logger.info("Relevant context found — using FAISS knowledge base.")
+        prompt = f"""You are a Pakistan legal assistant. Answer ONLY from the context below.
 
 <context>
 {context}
@@ -189,14 +213,18 @@ Rules:
 - Never invent case citations, dates, or legal principles.
 
 Answer:"""
+    else:
+        logger.info("No relevant context found — falling back to LLM general knowledge with disclaimer.")
+        prompt = f"""You are a Pakistan legal assistant. The user asked a question, but it was not found in the local legal knowledge base.
 
-    # OPTIMIZATION 4: max_tokens=400 — was unbounded, caused TPM spikes
-    llm = ChatGroq(
-        api_key=GROQ_API_KEY,
-        model=GROQ_MODEL,
-        temperature=0.0,
-        max_tokens=400,  # was not set — prevents runaway token usage
-    )
+Answer the question using your own knowledge of Pakistani law. You MUST start your answer with this exact disclaimer on its own line:
+"⚠️ This case/topic is not in my knowledge base. Based on general Pakistani legal principles:"
+
+Then provide a helpful, accurate answer about Pakistani law. Do not invent specific case citations or dates.
+
+Question: {user_input}
+
+Answer:"""
 
     logger.info("Calling Groq LLM for final answer...")
     response = llm.invoke(prompt)
