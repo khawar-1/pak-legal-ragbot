@@ -195,11 +195,8 @@ def retrieval(user_input):
         max_tokens=400,
     )
 
-    # HYBRID RAG: Check if retrieved context is actually relevant to the question.
-    # If not, fall back to LLM's own knowledge with a clear disclaimer.
-    if _is_context_relevant(context, user_input):
-        logger.info("Relevant context found — using FAISS knowledge base.")
-        prompt = f"""You are a Pakistan legal assistant. Answer ONLY from the context below.
+    # STEP 1: Try answering from the FAISS knowledge base first
+    rag_prompt = f"""You are a Pakistan legal assistant. Answer ONLY from the context below.
 
 <context>
 {context}
@@ -213,20 +210,27 @@ Rules:
 - Never invent case citations, dates, or legal principles.
 
 Answer:"""
-    else:
-        logger.info("No relevant context found — falling back to LLM general knowledge with disclaimer.")
-        prompt = f"""You are a Pakistan legal assistant. The user asked a question, but it was not found in the local legal knowledge base.
 
-Answer the question using your own knowledge of Pakistani law. You MUST start your answer with this exact disclaimer on its own line:
-"⚠️ This case/topic is not in my knowledge base. Based on general Pakistani legal principles:"
+    logger.info("Calling Groq LLM (FAISS knowledge base)...")
+    response = llm.invoke(rag_prompt)
+    answer = response.content.strip()
 
-Then provide a helpful, accurate answer about Pakistani law. Do not invent specific case citations or dates.
+    # STEP 2: If the FAISS knowledge base didn't have the answer, fall back to
+    # the LLM's own general knowledge about Pakistani law, but add a disclaimer.
+    NOT_FOUND_PHRASE = "I don't have that information in my knowledge base"
+    if NOT_FOUND_PHRASE.lower() in answer.lower():
+        logger.info("FAISS had no answer — falling back to LLM general knowledge with disclaimer.")
+        fallback_prompt = f"""You are a Pakistan legal assistant. The user asked a question that is not covered in the local legal case files.
+
+Answer the question using your own knowledge of Pakistani law. You MUST start your answer with this disclaimer on its own line:
+"⚠️ This is not in my case files. Based on general Pakistani legal principles:"
+
+Then provide a helpful, accurate answer. Do not invent specific case citations or dates.
 
 Question: {user_input}
 
 Answer:"""
+        fallback_response = llm.invoke(fallback_prompt)
+        return fallback_response.content, context
 
-    logger.info("Calling Groq LLM for final answer...")
-    response = llm.invoke(prompt)
-
-    return response.content, context
+    return answer, context
