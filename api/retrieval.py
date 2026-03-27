@@ -11,8 +11,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# Maximum characters for context passed to LLM (~4k tokens)
-MAX_CONTEXT_CHARS = 25000
+# OPTIMIZATION 1: Context char cap reduced 25000 → 12000 (~3000 tokens, was ~6200)
+MAX_CONTEXT_CHARS = 12000
 
 # Path to save the FAISS index locally
 FAISS_INDEX_PATH = os.path.join(os.path.dirname(__file__), "faiss_index")
@@ -32,9 +32,10 @@ def _get_embeddings():
 
 def _load_documents_from_json(json_path):
     """Load legal cases from the structured JSON dataset.
-    
-    Each case chunk gets a rich metadata header so the LLM always knows
-    which case the text belongs to.
+
+    OPTIMIZATION 2: Slim metadata header — journal + parties only.
+    Was 6 fields (journal, court, date, parties, statutes, lawyers).
+    Saves ~100-150 tokens per chunk × 4 chunks = ~400-600 tokens per request.
     """
     from langchain_core.documents import Document
 
@@ -44,25 +45,13 @@ def _load_documents_from_json(json_path):
 
     documents = []
     for case in cases:
-        # Build a clear metadata header for every chunk
         journal  = case.get("journal", "").strip()
-        court    = case.get("court", "").strip()
-        date     = case.get("date", "").strip()
         parties  = case.get("parties", "").strip()
-        statutes = case.get("statutes", "").strip()
-        lawyers  = case.get("lawyers", "").strip()
+        court    = case.get("court", "").strip()
 
-        header = (
-            f"CASE REFERENCE: {journal}\n"
-            f"COURT: {court}\n"
-            f"DATE: {date}\n"
-            f"PARTIES: {parties}\n"
-            f"STATUTES: {statutes}\n"
-            f"LAWYERS: {lawyers}\n"
-            f"---\n"
-        )
+        # Slim header: only the two most identifying fields
+        header = f"[{journal} | {parties}]\n"
 
-        # Use the pre-built chunks from the JSON (already ~500 words each)
         chunks = case.get("chunks", [])
         if chunks:
             for chunk in chunks:
@@ -99,29 +88,29 @@ def _load_documents_from_json(json_path):
 def _get_vector_db():
     """Get or create the FAISS vector database from disk."""
     embeddings = _get_embeddings()
-    
+
     # If the index exists on disk, load it instantly (0 API calls).
     if os.path.exists(FAISS_INDEX_PATH):
         logger.info("Loading existing FAISS vector database from disk...")
         return FAISS.load_local(FAISS_INDEX_PATH, embeddings, allow_dangerous_deserialization=True)
-    
+
     logger.info("FAISS index not found on disk. Building from scratch (first time only)...")
-    
+
     # Load documents from the structured JSON
     texts = _load_documents_from_json(KNOWLEDGE_BASE_PATH)
-    
+
     logger.info(f"Embedding {len(texts)} chunks with HuggingFace (free, no quota limits)...")
-    
+
     # Build vector DB in batches
     batch_size = 100
     vector_db = None
-    
+
     for i in range(0, len(texts), batch_size):
         batch = texts[i:i + batch_size]
         batch_num = (i // batch_size) + 1
         total_batches = (len(texts) + batch_size - 1) // batch_size
         logger.info(f"Embedding batch {batch_num}/{total_batches} ({len(batch)} chunks)...")
-        
+
         retries = 0
         while retries < 5:
             try:
@@ -135,10 +124,10 @@ def _get_vector_db():
                 logger.warning(f"Error: {e}. Retrying in 10 seconds...")
                 time.sleep(10)
                 retries += 1
-        
+
         # Small delay between batches
         time.sleep(1)
-    
+
     logger.info("Vector database built successfully! Saving to disk...")
     vector_db.save_local(FAISS_INDEX_PATH)
     logger.info("Saved! Future startups will load instantly from disk.")
@@ -148,28 +137,26 @@ def _get_vector_db():
 def retrieval(user_input):
     logger.info("Getting vector DB (will load from disk if available)...")
     vector_db = _get_vector_db()
-    
+
     logger.info("Retrieving relevant documents for your query...")
-    
+
     # EXACT MATCH HEURISTIC: Find cases where the journal is exactly in the query
+    # OPTIMIZATION 3: exact match cap reduced 4 → 2
     exact_match_docs = []
     query_upper = user_input.upper()
-    
+
     if hasattr(vector_db, "docstore") and hasattr(vector_db.docstore, "_dict"):
         for doc_id, doc in vector_db.docstore._dict.items():
             journal = doc.metadata.get("journal", "").strip().upper()
-            
-            # If the user query exactly mentions a non-empty journal (e.g. "1996 PLD 149")
             if journal and journal in query_upper:
                 exact_match_docs.append(doc)
-    
-    # Limit exact matches so we don't blow up context
-    exact_match_docs = exact_match_docs[:4]
-    
-    # Semantic Search for conceptually similar chunks
-    retriever = vector_db.as_retriever(search_kwargs={"k": 6})
+
+    exact_match_docs = exact_match_docs[:2]  # was 4
+
+    # OPTIMIZATION 3: Semantic top_k reduced 6 → 3
+    retriever = vector_db.as_retriever(search_kwargs={"k": 3})  # was 6
     semantic_docs = retriever.invoke(user_input)
-    
+
     # Combine exact matches and semantic matches, removing duplicates
     all_docs = []
     seen_content = set()
@@ -177,43 +164,41 @@ def retrieval(user_input):
         if doc.page_content not in seen_content:
             all_docs.append(doc)
             seen_content.add(doc.page_content)
-    
-    # Keep only the top 8 chunks total to avoid LLM token limits
-    relevant_docs = all_docs[:8]
-    
+
+    # OPTIMIZATION 3: Final chunk cap reduced 8 → 4
+    relevant_docs = all_docs[:4]  # was 8
+
     # Format context from documents
     context = "\n\n".join([doc.page_content for doc in relevant_docs])
     if len(context) > MAX_CONTEXT_CHARS:
-        context = context[:MAX_CONTEXT_CHARS] + "\n\n[Context truncated for length]"
-    
-    # Define the prompt template - STRICT grounding to prevent hallucination
-    prompt = f"""You are a strict Pakistan Legal Case Assistant. 
-Your ONLY source of knowledge is the XML <context> provided below.
+        context = context[:MAX_CONTEXT_CHARS] + "\n\n[Context truncated]"
+
+    # OPTIMIZATION 4: Shorter, tighter prompt (saves ~50 tokens every request)
+    # Old prompt was verbose with 4 numbered instructions repeated on every call
+    prompt = f"""You are a Pakistan legal assistant. Answer ONLY from the context below.
 
 <context>
 {context}
 </context>
 
-USER QUESTION:
-{user_input}
+Question: {user_input}
 
-INSTRUCTIONS:
-1. You MUST answer the user's question using ONLY the <context> above.
-2. If the <context> does not contain the answer, you MUST respond EXACTLY with: "I don't have that information in my knowledge base."
-3. NEVER invent, hallucinate, or guess case names, citation numbers (like PLD, MLD, CLC), dates, or legal principles from your outside training data.
-4. If the user asks you to list or name cases, ONLY list the `CASE REFERENCE:` and `PARTIES:` blocks that physically appear inside the <context> tags above. DO NOT name any other cases.
+Rules:
+- Use ONLY the context above.
+- If not found, say exactly: "I don't have that information in my knowledge base."
+- Never invent case citations, dates, or legal principles.
 
-ANSWER (using ONLY the <context>):
-"""
-    
-    # Use Groq (free) for the smart answer generation
+Answer:"""
+
+    # OPTIMIZATION 4: max_tokens=400 — was unbounded, caused TPM spikes
     llm = ChatGroq(
         api_key=GROQ_API_KEY,
         model=GROQ_MODEL,
         temperature=0.0,
+        max_tokens=400,  # was not set — prevents runaway token usage
     )
-    
+
     logger.info("Calling Groq LLM for final answer...")
     response = llm.invoke(prompt)
-    
+
     return response.content, context
