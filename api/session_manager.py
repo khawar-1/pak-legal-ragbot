@@ -216,6 +216,40 @@ class SessionManager:
             logger.error(f"Error getting chat history: {e}")
             return []
     
+    async def get_user_sessions(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get all sessions for a specific user, sorted by last_updated desc"""
+        try:
+            collection = self._get_collection()
+            if collection is None:
+                return []
+
+            cursor = collection.find(
+                {"user_id": user_id},
+                {"session_id": 1, "chat_history": 1, "last_updated": 1, "created_at": 1}
+            ).sort("last_updated", -1)
+
+            sessions = []
+            async for session in cursor:
+                # Derive title from the first user message
+                history = session.get("chat_history", [])
+                title = "New Chat"
+                for msg in history:
+                    if msg.get("sender") == "User":
+                        text = msg.get("message", "")
+                        title = text[:60] + ("..." if len(text) > 60 else "")
+                        break
+
+                sessions.append({
+                    "session_id": session["session_id"],
+                    "title": title,
+                    "last_updated": session.get("last_updated", ""),
+                    "created_at": session.get("created_at", ""),
+                })
+            return sessions
+        except Exception as e:
+            logger.error(f"Error getting user sessions: {e}")
+            return []
+
     async def get_existing_requirements(self, session_id: str) -> Dict[str, Any]:
         """Get existing extracted requirements"""
         try:

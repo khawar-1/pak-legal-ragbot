@@ -109,6 +109,16 @@ async def delete_session(session_id: str):
         return {"success": False, "error": str(e)}
 
 
+@app.get("/api/sessions/user/{user_id}")
+async def get_user_sessions(user_id: str):
+    """Get all chat sessions for a specific user (for the history sidebar)"""
+    try:
+        sessions = await session_manager.get_user_sessions(user_id)
+        return {"success": True, "sessions": sessions}
+    except Exception as e:
+        logger.error(f"Error getting user sessions: {e}")
+        return {"success": False, "sessions": [], "error": str(e)}
+
 @app.post("/api/chat")
 async def chat(request: ChatRequest) -> ChatResponse:
     """
