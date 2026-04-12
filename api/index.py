@@ -3,7 +3,6 @@ FastAPI Main Application - Legal Case Assistant with MongoDB Integration
 """
 from fastapi import FastAPI, HTTPException
 from .models import ChatRequest, ChatResponse, IntentClassification
-from .utils import generate_analysis_and_tips
 from .retrieval import retrieval
 from .database import connect_to_mongo, close_mongo_connection, get_database
 from .session_manager import session_manager
@@ -176,27 +175,24 @@ async def handle_legal_query(
 ) -> ChatResponse:
     """Handle legal-related queries using RAG system"""
     try:
-        # Use RAG system for legal queries
+        # Use RAG system for legal queries — single LLM call only
         answer, context = retrieval(user_input)
-        analysis, tips = generate_analysis_and_tips(user_input, context)
-        
-        # Format AI response
-        ai_message = f"Analysis: {analysis.generations[0][0].text if hasattr(analysis, 'generations') else str(analysis)}\nAnswer: {answer}"
+
         
         # Save AI response to session
         await session_manager.add_message(
             session_id=session_id,
             sender="AI",
-            message=ai_message,
+            message=answer,
             response_type="legal_query_response"
         )
         
         response = ChatResponse(
             intent_classification=intent_classification,
             response_type="legal_query_response",
-            question_analysis=analysis.generations[0][0].text if hasattr(analysis, 'generations') else str(analysis),
+            question_analysis="",
             answer=answer,
-            tips=tips.generations[0][0].text if hasattr(tips, 'generations') else str(tips),
+            tips="",
             session_id=session_id
         )
         
