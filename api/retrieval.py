@@ -152,78 +152,154 @@ def _is_context_relevant(context: str, user_input: str) -> bool:
     return True  # For general questions, assume context is relevant
 
 
-def retrieval(user_input, chat_history=None):
-    logger.info("Getting vector DB (will load from disk if available)...")
+def _format_history_block(chat_history):
+    """Format the last few exchanges into a compact text block for the prompt."""
+    if not chat_history:
+        return ""
+    lines = []
+    for msg in chat_history:
+        sender = msg.get("sender", "Unknown")
+        text = msg.get("message", "").strip()
+        if len(text) > 200:
+            text = text[:200] + "..."
+        lines.append(f"{sender}: {text}")
+    return "Previous conversation:\n" + "\n".join(lines) + "\n\n" if lines else ""
+
+
+def _faiss_case_lookup(faiss_query: str):
+    """Search FAISS for a specific case. Returns (docs, context_string)."""
     vector_db = _get_vector_db()
+    query_upper = faiss_query.upper()
 
-    logger.info("Retrieving relevant documents for your query...")
+    # Exact match on journal reference first
+    exact_docs = []
+    if hasattr(vector_db, "docstore") and hasattr(vector_db.docstore, "_dict"):
+        for doc in vector_db.docstore._dict.values():
+            journal = doc.metadata.get("journal", "").strip().upper()
+            if journal and journal in query_upper:
+                exact_docs.append(doc)
+    exact_docs = exact_docs[:3]
 
-    # Build an enriched FAISS search query.
-    # If the current question is a short follow-up (e.g. "what can I learn from this case"),
-    # append the last User message from history so FAISS searches for the right case.
+    # Semantic fallback
+    semantic_docs = vector_db.as_retriever(search_kwargs={"k": 3}).invoke(faiss_query)
+
+    # Merge, deduplicate, cap at 4
+    seen, all_docs = set(), []
+    for doc in exact_docs + semantic_docs:
+        if doc.page_content not in seen:
+            all_docs.append(doc)
+            seen.add(doc.page_content)
+    all_docs = all_docs[:4]
+
+    context = "\n\n".join(d.page_content for d in all_docs)
+    if len(context) > MAX_CONTEXT_CHARS:
+        context = context[:MAX_CONTEXT_CHARS] + "\n\n[Context truncated]"
+    return all_docs, context
+
+
+def _list_cases_from_faiss(limit: int = 8) -> str:
+    """Return a formatted list of unique case titles + brief snippets from FAISS."""
+    vector_db = _get_vector_db()
+    seen_journals, case_list = set(), []
+
+    if hasattr(vector_db, "docstore") and hasattr(vector_db.docstore, "_dict"):
+        for doc in vector_db.docstore._dict.values():
+            journal = doc.metadata.get("journal", "").strip()
+            parties = doc.metadata.get("parties", "").strip()
+            court   = doc.metadata.get("court", "").strip()
+            if not journal or journal in seen_journals:
+                continue
+            seen_journals.add(journal)
+            # Grab a brief snippet (skip the header line)
+            content_lines = doc.page_content.split("\n")
+            snippet_lines = [l for l in content_lines[1:] if l.strip()]
+            snippet = " ".join(snippet_lines)[:130]
+            if len(snippet) == 130:
+                snippet += "..."
+            case_list.append((journal, parties, court, snippet))
+            if len(case_list) >= limit:
+                break
+
+    if not case_list:
+        return "I couldn't retrieve case listings right now. Please try asking about a specific citation."
+
+    lines = ["Here are some property law cases available in my knowledge base:\n"]
+    for i, (journal, parties, court, snippet) in enumerate(case_list, 1):
+        lines.append(f"{i}. **{journal}**")
+        if parties:
+            lines.append(f"   Parties: {parties}")
+        if court:
+            lines.append(f"   Court: {court}")
+        if snippet:
+            lines.append(f"   Summary: {snippet}")
+        lines.append("")
+    lines.append("Ask me about any of these cases for a detailed explanation.")
+    return "\n".join(lines)
+
+
+def retrieval(user_input, chat_history=None):
+    """
+    Property Law Bot — three-mode pipeline:
+
+    MODE A  — Specific case lookup (citation detected)
+              → Search FAISS, answer from retrieved documents.
+
+    MODE B  — User wants examples / a list of cases
+              → Return case titles + snippets directly from FAISS docstore.
+
+    MODE C  — General property law question  (default)
+              → Answer from Groq's own knowledge.
+              → Reject out-of-domain questions gracefully.
+    """
+    import re
+
+    # ── Build enriched FAISS query for short follow-ups ──────────────────────
     faiss_query = user_input
     if chat_history:
-        last_user_msgs = [
-            m.get("message", "") for m in chat_history if m.get("sender") == "User"
-        ]
+        last_user_msgs = [m.get("message", "") for m in chat_history if m.get("sender") == "User"]
         if last_user_msgs and len(user_input.split()) <= 10:
-            # Short follow-up: enrich with the previous user message for better retrieval
             faiss_query = last_user_msgs[-1] + " " + user_input
             logger.info(f"Enriched FAISS query: {faiss_query}")
 
-    # EXACT MATCH HEURISTIC: Find cases where the journal is exactly in the query
-    exact_match_docs = []
-    query_upper = faiss_query.upper()
+    # ── Detect intent ─────────────────────────────────────────────────────────
+    # Citation pattern: e.g. "2008 CLC 332", "PLD 2005 123", "1998 MLD 45"
+    citation_re = re.search(
+        r'\b(?:PLD|CLC|MLD|SCMR|PTD|YLR|AIR)\s*\d{4}|\b\d{4}\s+(?:PLD|CLC|MLD|SCMR|PTD|YLR|AIR)\s+\d+',
+        faiss_query, re.IGNORECASE
+    )
+    has_citation = bool(citation_re)
 
-    if hasattr(vector_db, "docstore") and hasattr(vector_db.docstore, "_dict"):
-        for doc_id, doc in vector_db.docstore._dict.items():
-            journal = doc.metadata.get("journal", "").strip().upper()
-            if journal and journal in query_upper:
-                exact_match_docs.append(doc)
+    example_keywords = [
+        "example", "examples", "list", "some cases", "show cases", "give case",
+        "case title", "what cases", "available cases", "which cases", "any cases",
+        "cases available", "cases in", "cases you have", "cases do you have"
+    ]
+    wants_examples = any(kw in user_input.lower() for kw in example_keywords)
 
-    exact_match_docs = exact_match_docs[:2]
-
-    retriever = vector_db.as_retriever(search_kwargs={"k": 3})
-    semantic_docs = retriever.invoke(faiss_query)
-
-    # Combine exact matches and semantic matches, removing duplicates
-    all_docs = []
-    seen_content = set()
-    for doc in exact_match_docs + semantic_docs:
-        if doc.page_content not in seen_content:
-            all_docs.append(doc)
-            seen_content.add(doc.page_content)
-
-    relevant_docs = all_docs[:4]
-
-    # Format context from documents
-    context = "\n\n".join([doc.page_content for doc in relevant_docs])
-    if len(context) > MAX_CONTEXT_CHARS:
-        context = context[:MAX_CONTEXT_CHARS] + "\n\n[Context truncated]"
-
+    # ── Shared resources ──────────────────────────────────────────────────────
+    history_block = _format_history_block(chat_history)
     llm = ChatGroq(
         api_key=GROQ_API_KEY,
         model=GROQ_MODEL,
         temperature=0.0,
-        max_tokens=700,  # Tuned for brief but complete answers
+        max_tokens=700,
     )
 
-    # Format last 2 exchanges (4 messages max) as a concise history block
-    history_block = ""
-    if chat_history:
-        lines = []
-        for msg in chat_history:
-            sender = msg.get("sender", "Unknown")
-            text   = msg.get("message", "").strip()
-            # Keep history short: cap each message at 300 chars
-            if len(text) > 300:
-                text = text[:300] + "..."
-            lines.append(f"{sender}: {text}")
-        if lines:
-            history_block = "Previous conversation (last 2 exchanges):\n" + "\n".join(lines) + "\n\n"
+    # ═══════════════════════════════════════════════════════════════════════════
+    # MODE A — Specific case lookup
+    # ═══════════════════════════════════════════════════════════════════════════
+    if has_citation:
+        logger.info("MODE A: Citation detected — looking up case in FAISS knowledge base...")
+        docs, context = _faiss_case_lookup(faiss_query)
 
-    # STEP 1: Try answering from the FAISS knowledge base first
-    rag_prompt = f"""You are a Pakistan legal assistant. Answer ONLY from the context below.
+        if not docs:
+            return (
+                "This specific case is not in my knowledge base. "
+                "You can ask me to list available property cases so you can pick one to explore.",
+                ""
+            )
+
+        case_prompt = f"""You are a Pakistani property law assistant. Answer ONLY from the case context below.
 
 {history_block}<context>
 {context}
@@ -232,35 +308,53 @@ def retrieval(user_input, chat_history=None):
 Question: {user_input}
 
 Rules:
-- Use ONLY the context above.
+- Answer CONCISELY from the context (4-6 sentences max).
+- Mention the case reference, court, date, parties, and the key legal principle decided.
 - You may use the previous conversation to understand follow-up questions.
-- Be CONCISE: give a focused answer in 3-5 sentences, or up to 4 bullet points if listing.
-- Do NOT pad with unnecessary detail or formatting headers.
-- If not found, say exactly: "I don't have that information in my knowledge base."
-- Never invent case citations, dates, or legal principles.
+- Never invent details not present in the context.
+
+Answer:"""
+        response = llm.invoke(case_prompt)
+        return response.content.strip(), context
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # MODE B — List available cases from knowledge base
+    # ═══════════════════════════════════════════════════════════════════════════
+    elif wants_examples:
+        logger.info("MODE B: Listing cases from FAISS docstore...")
+        listing = _list_cases_from_faiss(limit=8)
+        return listing, ""
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # MODE C — General property law question (Groq general knowledge)
+    # ═══════════════════════════════════════════════════════════════════════════
+    else:
+        logger.info("MODE C: General query — Groq general knowledge with domain check...")
+
+        general_prompt = f"""You are a property law assistant specializing in Pakistani property law.
+Your ONLY domain is property law: land, real estate, ownership, tenancy, rent, transfer of property,
+mortgages, easements, preemption, possession disputes, inheritance of property, property registration, etc.
+
+{history_block}User question: {user_input}
+
+STRICT RULES:
+1. If the question is NOT about property law, respond with ONLY this exact text and nothing else:
+   OUT_OF_DOMAIN
+2. If it IS a property law question, answer from your knowledge of Pakistani law in 3-5 sentences.
+3. Do NOT invent specific case citations or dates.
+4. Do NOT add unnecessary headers or padding.
 
 Answer:"""
 
-    logger.info("Calling Groq LLM (FAISS knowledge base)...")
-    response = llm.invoke(rag_prompt)
-    answer = response.content.strip()
+        response = llm.invoke(general_prompt)
+        answer = response.content.strip()
 
-    # STEP 2: If the FAISS knowledge base didn't have the answer, fall back to
-    # the LLM's own general knowledge about Pakistani law, but add a disclaimer.
-    NOT_FOUND_PHRASE = "I don't have that information in my knowledge base"
-    if NOT_FOUND_PHRASE.lower() in answer.lower():
-        logger.info("FAISS had no answer — falling back to LLM general knowledge with disclaimer.")
-        fallback_prompt = f"""You are a Pakistan legal assistant. The user asked a question not covered in the local case files.
+        if "OUT_OF_DOMAIN" in answer:
+            return (
+                "I'm a **property law assistant** and can only help with property-related queries — "
+                "land, ownership, tenancy, transfer of property, mortgage, preemption, possession disputes, etc. "
+                "For other legal matters, please consult a relevant specialist.",
+                ""
+            )
 
-{history_block}Answer using your knowledge of Pakistani law. Start with this disclaimer on its own line:
-"⚠️ This is not in my case files. Based on general Pakistani legal principles:"
-
-Then give a BRIEF, focused answer: 3-5 sentences max. No invented case citations or dates.
-
-Question: {user_input}
-
-Answer:"""
-        fallback_response = llm.invoke(fallback_prompt)
-        return fallback_response.content, context
-
-    return answer, context
+        return answer, ""
