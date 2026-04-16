@@ -158,9 +158,22 @@ def retrieval(user_input, chat_history=None):
 
     logger.info("Retrieving relevant documents for your query...")
 
+    # Build an enriched FAISS search query.
+    # If the current question is a short follow-up (e.g. "what can I learn from this case"),
+    # append the last User message from history so FAISS searches for the right case.
+    faiss_query = user_input
+    if chat_history:
+        last_user_msgs = [
+            m.get("message", "") for m in chat_history if m.get("sender") == "User"
+        ]
+        if last_user_msgs and len(user_input.split()) <= 10:
+            # Short follow-up: enrich with the previous user message for better retrieval
+            faiss_query = last_user_msgs[-1] + " " + user_input
+            logger.info(f"Enriched FAISS query: {faiss_query}")
+
     # EXACT MATCH HEURISTIC: Find cases where the journal is exactly in the query
     exact_match_docs = []
-    query_upper = user_input.upper()
+    query_upper = faiss_query.upper()
 
     if hasattr(vector_db, "docstore") and hasattr(vector_db.docstore, "_dict"):
         for doc_id, doc in vector_db.docstore._dict.items():
@@ -171,7 +184,7 @@ def retrieval(user_input, chat_history=None):
     exact_match_docs = exact_match_docs[:2]
 
     retriever = vector_db.as_retriever(search_kwargs={"k": 3})
-    semantic_docs = retriever.invoke(user_input)
+    semantic_docs = retriever.invoke(faiss_query)
 
     # Combine exact matches and semantic matches, removing duplicates
     all_docs = []
@@ -192,7 +205,7 @@ def retrieval(user_input, chat_history=None):
         api_key=GROQ_API_KEY,
         model=GROQ_MODEL,
         temperature=0.0,
-        max_tokens=400,
+        max_tokens=1000,  # Raised from 400 — prevents answers being cut off mid-sentence
     )
 
     # Format last 2 exchanges (4 messages max) as a concise history block
