@@ -331,43 +331,29 @@ Answer:"""
         return listing, ""
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # MODE C — General property question: FAISS first, Groq fallback
+    # MODE C — General property law question (Groq general knowledge)
     # ═══════════════════════════════════════════════════════════════════════════
     else:
-        logger.info("MODE C: Semantic FAISS search first, Groq fallback if not relevant...")
+        logger.info("MODE C: General query — Groq general knowledge with domain check...")
 
-        # Step 1: Semantic search in knowledge base
-        vector_db = _get_vector_db()
-        semantic_docs = vector_db.as_retriever(search_kwargs={"k": 3}).invoke(faiss_query)
-        context = "\n\n".join(d.page_content for d in semantic_docs)
-        if len(context) > MAX_CONTEXT_CHARS:
-            context = context[:MAX_CONTEXT_CHARS] + "\n\n[Context truncated]"
+        general_prompt = f"""You are a property law assistant specializing in Pakistani property law.
+Your ONLY domain is property law: land, real estate, ownership, tenancy, rent, transfer of property,
+mortgages, easements, preemption, possession disputes, inheritance of property, property registration, etc.
 
-        # Step 2: Ask LLM to answer from FAISS context if relevant,
-        # signal NO_RELEVANT_CONTEXT if not, or OUT_OF_DOMAIN if off-topic.
-        rag_prompt = f"""You are a Pakistani property law assistant. Your domain is STRICTLY property law.
+{history_block}User question: {user_input}
 
-{history_block}Here is content retrieved from the knowledge base that may be relevant:
-<context>
-{context}
-</context>
-
-User question: {user_input}
-
-STRICT RULES — respond with ONLY ONE of these:
-1. If the question is NOT about property law → respond with exactly: OUT_OF_DOMAIN
-2. If the context above is clearly relevant to the question → answer using those case(s) as reference.
-   - Keep the answer concise (4-6 sentences).
-   - Cite the relevant case reference(s) from the context (e.g. "In 2008 CLC 332...").
-   - Do NOT invent details not present in the context.
-3. If the context is NOT relevant to the question → respond with exactly: NO_RELEVANT_CONTEXT
+STRICT RULES:
+1. If the question is NOT about property law, respond with ONLY this exact text and nothing else:
+   OUT_OF_DOMAIN
+2. If it IS a property law question, answer from your knowledge of Pakistani law in 3-5 sentences.
+3. Do NOT invent specific case citations or dates.
+4. Do NOT add unnecessary headers or padding.
 
 Answer:"""
 
-        response = llm.invoke(rag_prompt)
+        response = llm.invoke(general_prompt)
         answer = response.content.strip()
 
-        # Domain rejection
         if "OUT_OF_DOMAIN" in answer:
             return (
                 "I'm a **Pakistani property law assistant** and can only help with property-related queries — "
@@ -376,21 +362,4 @@ Answer:"""
                 ""
             )
 
-        # FAISS had nothing relevant → fall back to Groq general knowledge
-        if "NO_RELEVANT_CONTEXT" in answer:
-            logger.info("FAISS context not relevant — falling back to Groq general knowledge...")
-            fallback_prompt = f"""You are a Pakistani property law assistant specializing in Pakistani property law.
-Your domain is ONLY property law: land, real estate, ownership, tenancy, rent, transfer of property,
-mortgages, easements, preemption, possession disputes, inheritance of property, property registration, etc.
-
-{history_block}Answer the following question using your general knowledge of Pakistani property law.
-Be concise (3-5 sentences). Do NOT invent specific case citations or dates.
-
-Question: {user_input}
-
-Answer:"""
-            fallback = llm.invoke(fallback_prompt)
-            return fallback.content.strip(), ""
-
-        # FAISS had relevant context — return the grounded answer
-        return answer, context
+        return answer, ""
