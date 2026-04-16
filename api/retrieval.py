@@ -239,20 +239,15 @@ def _list_cases_from_faiss(limit: int = 8) -> str:
 
 def retrieval(user_input, chat_history=None):
     """
-    Property Law Bot — three-mode pipeline:
+    Property Law Bot — Unified Pipeline:
 
-    MODE A  — Specific case lookup (citation detected)
-              → Search FAISS, answer from retrieved documents.
+    MODE 1: List Cases Bypass
+            → If user asks for examples, return available cases directly from FAISS.
 
-    MODE B  — User wants examples / a list of cases
-              → Return case titles + snippets directly from FAISS docstore.
-
-    MODE C  — General property law question  (default)
-              → Answer from Groq's own knowledge.
-              → Reject out-of-domain questions gracefully.
+    MODE 2: Master RAG Pipeline
+            → Always search FAISS first.
+            → Use a Master Prompt to enforce Safety, Domain Restriction, Chit-chat, and Answering logic.
     """
-    import re
-
     # ── Build enriched FAISS query for short follow-ups ──────────────────────
     faiss_query = user_input
     if chat_history:
@@ -261,20 +256,18 @@ def retrieval(user_input, chat_history=None):
             faiss_query = last_user_msgs[-1] + " " + user_input
             logger.info(f"Enriched FAISS query: {faiss_query}")
 
-    # ── Detect intent ─────────────────────────────────────────────────────────
-    # Citation pattern: e.g. "2008 CLC 332", "PLD 2005 123", "1998 MLD 45"
-    citation_re = re.search(
-        r'\b(?:PLD|CLC|MLD|SCMR|PTD|YLR|AIR)\s*\d{4}|\b\d{4}\s+(?:PLD|CLC|MLD|SCMR|PTD|YLR|AIR)\s+\d+',
-        faiss_query, re.IGNORECASE
-    )
-    has_citation = bool(citation_re)
-
+    # ── Detect intent (Mode 1 bypass) ─────────────────────────────────────────
     example_keywords = [
         "example", "examples", "list", "some cases", "show cases", "give case",
         "case title", "what cases", "available cases", "which cases", "any cases",
         "cases available", "cases in", "cases you have", "cases do you have"
     ]
     wants_examples = any(kw in user_input.lower() for kw in example_keywords)
+
+    if wants_examples:
+        logger.info("MODE 1: Listing cases from FAISS docstore...")
+        listing = _list_cases_from_faiss(limit=8)
+        return listing, ""
 
     # ── Shared resources ──────────────────────────────────────────────────────
     history_block = _format_history_block(chat_history)
@@ -286,75 +279,55 @@ def retrieval(user_input, chat_history=None):
     )
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # MODE A — Specific case lookup
+    # MODE 2 — Master RAG Pipeline
     # ═══════════════════════════════════════════════════════════════════════════
-    if has_citation:
-        logger.info("MODE A: Citation detected — looking up case in FAISS knowledge base...")
-        docs, context = _faiss_case_lookup(faiss_query)
+    logger.info("MODE 2: Always searching FAISS first...")
+    docs, context = _faiss_case_lookup(faiss_query)
 
-        if not docs:
-            return (
-                "This specific case is not in my knowledge base. "
-                "You can ask me to list available property cases so you can pick one to explore.",
-                ""
-            )
-
-        case_prompt = f"""You are a Pakistani property law assistant. Answer ONLY from the case context below.
+    master_prompt = f"""You are a Pakistani property law assistant. 
+Your domain is STRICTLY property law (land, ownership, tenancy, transfer of property, mortgages, preemption, possession disputes, etc.).
 
 {history_block}<context>
 {context}
 </context>
 
-Question: {user_input}
+User question: {user_input}
 
-Rules:
-- Answer CONCISELY from the context (4-6 sentences max).
-- Mention the case reference, court, date, parties, and the key legal principle decided.
-- You may use the previous conversation to understand follow-up questions.
-- Never invent details not present in the context.
+STRICT INSTRUCTIONS (Process IN THIS EXACT ORDER):
 
-Answer:"""
-        response = llm.invoke(case_prompt)
-        return response.content.strip(), context
+1. SAFETY FILTER: If the user's question asks for anything harmful, unethical, illegal, or inappropriate, respond with EXACTLY and ONLY this text:
+   [UNSAFE]
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    # MODE B — List available cases from knowledge base
-    # ═══════════════════════════════════════════════════════════════════════════
-    elif wants_examples:
-        logger.info("MODE B: Listing cases from FAISS docstore...")
-        listing = _list_cases_from_faiss(limit=8)
-        return listing, ""
+2. DOMAIN CHIT-CHAT FILTER: If the question is a general conversational pleasantry or asking what you can do (e.g., "Hi", "Hello", "How are you?", "Who are you?", "Thanks"), answer politely and briefly in character.
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    # MODE C — General property law question (Groq general knowledge)
-    # ═══════════════════════════════════════════════════════════════════════════
-    else:
-        logger.info("MODE C: General query — Groq general knowledge with domain check...")
+3. DOMAIN STRICT FILTER: If the user asks a legal question that is NOT related to property law (e.g., criminal law, tax law, constitutional law, family law not involving property), respond with EXACTLY and ONLY this text:
+   [OUT_OF_DOMAIN]
 
-        general_prompt = f"""You are a property law assistant specializing in Pakistani property law.
-Your ONLY domain is property law: land, real estate, ownership, tenancy, rent, transfer of property,
-mortgages, easements, preemption, possession disputes, inheritance of property, property registration, etc.
-
-{history_block}User question: {user_input}
-
-STRICT RULES:
-1. If the question is NOT about property law, respond with ONLY this exact text and nothing else:
-   OUT_OF_DOMAIN
-2. If it IS a property law question, answer from your knowledge of Pakistani law in 3-5 sentences.
-3. Do NOT invent specific case citations or dates.
-4. Do NOT add unnecessary headers or padding.
+4. ANSWERING LOGIC (For property law questions ONLY):
+   - First, check if the provided <context> contains relevant information to answer the user's query. If it does, USE IT as your primary reference and cite the case details provided in the context.
+   - If the <context> does NOT contain relevant information, seamlessly fallback and answer using your own general knowledge of Pakistani property law.
+   - Be CONCISE: Give a focused answer in 3-5 sentences, or up to 4 bullet points.
+   - NEVER invent case citations, dates, or non-existent legal statutes.
 
 Answer:"""
 
-        response = llm.invoke(general_prompt)
-        answer = response.content.strip()
+    logger.info("Calling Groq LLM (Master prompt)...")
+    response = llm.invoke(master_prompt)
+    answer = response.content.strip()
 
-        if "OUT_OF_DOMAIN" in answer:
-            return (
-                "I'm a **property law assistant** and can only help with property-related queries — "
-                "land, ownership, tenancy, transfer of property, mortgage, preemption, possession disputes, etc. "
-                "For other legal matters, please consult a relevant specialist.",
-                ""
-            )
+    # Handle rejection codes
+    if "[UNSAFE]" in answer:
+        return (
+            "I cannot fulfill that request. Please keep questions respectful, ethical, and within the boundaries of the law.",
+            ""
+        )
+    
+    if "[OUT_OF_DOMAIN]" in answer:
+        return (
+            "I'm a **Pakistani property law assistant** and can only help with property-related queries — "
+            "land, ownership, tenancy, transfer of property, mortgage, preemption, possession disputes, etc. "
+            "For other legal matters like criminal or family law, please consult a relevant specialist.",
+            ""
+        )
 
-        return answer, ""
+    return answer, context
