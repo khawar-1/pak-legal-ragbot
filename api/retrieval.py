@@ -152,7 +152,7 @@ def _is_context_relevant(context: str, user_input: str) -> bool:
     return True  # For general questions, assume context is relevant
 
 
-def retrieval(user_input):
+def retrieval(user_input, chat_history=None):
     logger.info("Getting vector DB (will load from disk if available)...")
     vector_db = _get_vector_db()
 
@@ -195,10 +195,24 @@ def retrieval(user_input):
         max_tokens=400,
     )
 
+    # Format last 2 exchanges (4 messages max) as a concise history block
+    history_block = ""
+    if chat_history:
+        lines = []
+        for msg in chat_history:
+            sender = msg.get("sender", "Unknown")
+            text   = msg.get("message", "").strip()
+            # Keep history short: cap each message at 300 chars
+            if len(text) > 300:
+                text = text[:300] + "..."
+            lines.append(f"{sender}: {text}")
+        if lines:
+            history_block = "Previous conversation (last 2 exchanges):\n" + "\n".join(lines) + "\n\n"
+
     # STEP 1: Try answering from the FAISS knowledge base first
     rag_prompt = f"""You are a Pakistan legal assistant. Answer ONLY from the context below.
 
-<context>
+{history_block}<context>
 {context}
 </context>
 
@@ -206,6 +220,7 @@ Question: {user_input}
 
 Rules:
 - Use ONLY the context above.
+- You may use the previous conversation to understand follow-up questions.
 - If not found, say exactly: "I don't have that information in my knowledge base."
 - Never invent case citations, dates, or legal principles.
 
@@ -222,7 +237,7 @@ Answer:"""
         logger.info("FAISS had no answer — falling back to LLM general knowledge with disclaimer.")
         fallback_prompt = f"""You are a Pakistan legal assistant. The user asked a question that is not covered in the local legal case files.
 
-Answer the question using your own knowledge of Pakistani law. You MUST start your answer with this disclaimer on its own line:
+{history_block}Answer the question using your own knowledge of Pakistani law. You MUST start your answer with this disclaimer on its own line:
 "⚠️ This is not in my case files. Based on general Pakistani legal principles:"
 
 Then provide a helpful, accurate answer. Do not invent specific case citations or dates.

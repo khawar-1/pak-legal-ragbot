@@ -142,12 +142,20 @@ async def chat(request: ChatRequest) -> ChatResponse:
         except Exception as db_err:
             logger.warning(f"MongoDB unavailable, running in stateless mode: {db_err}")
             # Continue without session persistence
-        
+
+        # Fetch last 4 messages (= last 2 full exchanges) for context
+        chat_history = []
+        try:
+            chat_history = await session_manager.get_chat_history(session_id, limit=4)
+        except Exception as hist_err:
+            logger.warning(f"Could not fetch chat history: {hist_err}")
+
         # Handle legal query using RAG system
         return await handle_legal_query(
             user_input=request.user_input,
             intent_classification=intent_classification,
-            session_id=session_id
+            session_id=session_id,
+            chat_history=chat_history
         )
             
     except Exception as e:
@@ -171,12 +179,13 @@ async def chat(request: ChatRequest) -> ChatResponse:
 async def handle_legal_query(
     user_input: str,
     intent_classification: IntentClassification,
-    session_id: str
+    session_id: str,
+    chat_history: list = []
 ) -> ChatResponse:
     """Handle legal-related queries using RAG system"""
     try:
         # Use RAG system for legal queries — single LLM call only
-        answer, context = retrieval(user_input)
+        answer, context = retrieval(user_input, chat_history=chat_history)
 
         
         # Save AI response to session
