@@ -205,7 +205,7 @@ def retrieval(user_input, chat_history=None):
         api_key=GROQ_API_KEY,
         model=GROQ_MODEL,
         temperature=0.0,
-        max_tokens=1000,  # Raised from 400 — prevents answers being cut off mid-sentence
+        max_tokens=700,  # Tuned for brief but complete answers
     )
 
     # Format last 2 exchanges (4 messages max) as a concise history block
@@ -234,6 +234,8 @@ Question: {user_input}
 Rules:
 - Use ONLY the context above.
 - You may use the previous conversation to understand follow-up questions.
+- Be CONCISE: give a focused answer in 3-5 sentences, or up to 4 bullet points if listing.
+- Do NOT pad with unnecessary detail or formatting headers.
 - If not found, say exactly: "I don't have that information in my knowledge base."
 - Never invent case citations, dates, or legal principles.
 
@@ -248,12 +250,12 @@ Answer:"""
     NOT_FOUND_PHRASE = "I don't have that information in my knowledge base"
     if NOT_FOUND_PHRASE.lower() in answer.lower():
         logger.info("FAISS had no answer — falling back to LLM general knowledge with disclaimer.")
-        fallback_prompt = f"""You are a Pakistan legal assistant. The user asked a question that is not covered in the local legal case files.
+        fallback_prompt = f"""You are a Pakistan legal assistant. The user asked a question not covered in the local case files.
 
-{history_block}Answer the question using your own knowledge of Pakistani law. You MUST start your answer with this disclaimer on its own line:
+{history_block}Answer using your knowledge of Pakistani law. Start with this disclaimer on its own line:
 "⚠️ This is not in my case files. Based on general Pakistani legal principles:"
 
-Then provide a helpful, accurate answer. Do not invent specific case citations or dates.
+Then give a BRIEF, focused answer: 3-5 sentences max. No invented case citations or dates.
 
 Question: {user_input}
 

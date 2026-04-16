@@ -132,7 +132,16 @@ async def chat(request: ChatRequest) -> ChatResponse:
             )
             session_id = session["session_id"]
             
-            # Add user message to session
+            # Fetch history BEFORE adding the current message.
+            # This ensures last_user_msgs[-1] is the PREVIOUS question,
+            # not the current one — critical for correct FAISS query enrichment.
+            chat_history = []
+            try:
+                chat_history = await session_manager.get_chat_history(session_id, limit=4)
+            except Exception as hist_err:
+                logger.warning(f"Could not fetch chat history: {hist_err}")
+
+            # Add current user message to session (after history is captured)
             await session_manager.add_message(
                 session_id=session_id,
                 sender="User",
@@ -141,14 +150,8 @@ async def chat(request: ChatRequest) -> ChatResponse:
             )
         except Exception as db_err:
             logger.warning(f"MongoDB unavailable, running in stateless mode: {db_err}")
+            chat_history = []
             # Continue without session persistence
-
-        # Fetch last 4 messages (= last 2 full exchanges) for context
-        chat_history = []
-        try:
-            chat_history = await session_manager.get_chat_history(session_id, limit=4)
-        except Exception as hist_err:
-            logger.warning(f"Could not fetch chat history: {hist_err}")
 
         # Handle legal query using RAG system
         return await handle_legal_query(
