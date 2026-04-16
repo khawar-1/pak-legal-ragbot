@@ -198,16 +198,12 @@ def _faiss_case_lookup(faiss_query: str):
 
 
 def _list_cases_from_faiss(limit: int = 8) -> str:
-    """Return a formatted list of random/shuffled unique case titles + brief snippets from FAISS."""
-    import random
+    """Return a formatted list of unique case titles + brief snippets from FAISS."""
     vector_db = _get_vector_db()
-    seen_journals, case_pool = set(), []
+    seen_journals, case_list = set(), []
 
     if hasattr(vector_db, "docstore") and hasattr(vector_db.docstore, "_dict"):
-        docs = list(vector_db.docstore._dict.values())
-        random.shuffle(docs) # Shuffle so users see different cases when they ask for "more"
-        
-        for doc in docs:
+        for doc in vector_db.docstore._dict.values():
             journal = doc.metadata.get("journal", "").strip()
             parties = doc.metadata.get("parties", "").strip()
             court   = doc.metadata.get("court", "").strip()
@@ -220,15 +216,15 @@ def _list_cases_from_faiss(limit: int = 8) -> str:
             snippet = " ".join(snippet_lines)[:130]
             if len(snippet) == 130:
                 snippet += "..."
-            case_pool.append((journal, parties, court, snippet))
-            if len(case_pool) >= limit:
+            case_list.append((journal, parties, court, snippet))
+            if len(case_list) >= limit:
                 break
 
-    if not case_pool:
+    if not case_list:
         return "I couldn't retrieve case listings right now. Please try asking about a specific citation."
 
     lines = ["Here are some property law cases available in my knowledge base:\n"]
-    for i, (journal, parties, court, snippet) in enumerate(case_pool, 1):
+    for i, (journal, parties, court, snippet) in enumerate(case_list, 1):
         lines.append(f"{i}. **{journal}**")
         if parties:
             lines.append(f"   Parties: {parties}")
@@ -276,8 +272,7 @@ def retrieval(user_input, chat_history=None):
     example_keywords = [
         "example", "examples", "list", "some cases", "show cases", "give case",
         "case title", "what cases", "available cases", "which cases", "any cases",
-        "cases available", "cases in", "cases you have", "cases do you have",
-        "more cases", "tell me some more", "show me more", "give me more"
+        "cases available", "cases in", "cases you have", "cases do you have"
     ]
     wants_examples = any(kw in user_input.lower() for kw in example_keywords)
 
@@ -356,7 +351,7 @@ Answer:"""
 
         if "OUT_OF_DOMAIN" in answer:
             return (
-                "I'm a **Pakistani property law assistant** and can only help with property-related queries — "
+                "I'm a **property law assistant** and can only help with property-related queries — "
                 "land, ownership, tenancy, transfer of property, mortgage, preemption, possession disputes, etc. "
                 "For other legal matters, please consult a relevant specialist.",
                 ""
