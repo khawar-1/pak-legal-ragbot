@@ -199,11 +199,16 @@ def _faiss_case_lookup(faiss_query: str):
 
 def _list_cases_from_faiss(limit: int = 8) -> str:
     """Return a formatted list of unique case titles + brief snippets from FAISS."""
+    import random
     vector_db = _get_vector_db()
     seen_journals, case_list = set(), []
 
     if hasattr(vector_db, "docstore") and hasattr(vector_db.docstore, "_dict"):
-        for doc in vector_db.docstore._dict.values():
+        # Shuffle documents to provide different examples each time
+        docs = list(vector_db.docstore._dict.values())
+        random.shuffle(docs)
+        
+        for doc in docs:
             journal = doc.metadata.get("journal", "").strip()
             parties = doc.metadata.get("parties", "").strip()
             court   = doc.metadata.get("court", "").strip()
@@ -275,7 +280,7 @@ def retrieval(user_input, chat_history=None):
         api_key=GROQ_API_KEY,
         model=GROQ_MODEL,
         temperature=0.0,
-        max_tokens=700,
+        max_tokens=1000,
     )
 
     # ═══════════════════════════════════════════════════════════════════════════
@@ -306,7 +311,7 @@ STRICT INSTRUCTIONS (Process IN THIS EXACT ORDER):
 4. ANSWERING LOGIC (For property law questions ONLY):
    - First, check if the provided <context> contains relevant information to answer the user's query. If it does, USE IT as your primary reference and cite the case details provided in the context.
    - If the <context> does NOT contain relevant information, seamlessly fallback and answer using your own general knowledge of Pakistani property law.
-   - Be CONCISE: Give a focused answer in 3-5 sentences, or up to 4 bullet points.
+   - Provide a DETAILED and COMPREHENSIVE answer. Give full explanations, span around 2-3 paragraphs, or use 6-8 bullet points if listing factors.
    - NEVER invent case citations, dates, or non-existent legal statutes.
 
 Answer:"""
