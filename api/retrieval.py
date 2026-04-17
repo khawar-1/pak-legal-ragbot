@@ -290,7 +290,7 @@ def retrieval(user_input, chat_history=None):
     docs, context = _faiss_case_lookup(faiss_query)
 
     master_prompt = f"""You are a Pakistani property law assistant. 
-Your domain is STRICTLY property law (land, ownership, tenancy, transfer of property, mortgages, preemption, possession disputes, etc.).
+Your domain is STRICTLY property law (land, ownership, tenancy, transfer of property, mortgages, preemption, possession disputes, etc.) WITHIN Pakistan.
 
 {history_block}<context>
 {context}
@@ -308,7 +308,10 @@ STRICT INSTRUCTIONS: Choose EXACTLY ONE of the following paths based on the user
 3. DOMAIN STRICT FILTER: If the user asks a legal question NOT related to property law (e.g., criminal law, family law), respond with EXACTLY and ONLY this text:
    [OUT_OF_DOMAIN]
 
-4. ANSWERING LOGIC (For property law questions ONLY):
+4. GEOGRAPHIC FILTER: If the user asks about property law, buying property, or hiring lawyers in ANY country or city EXCEPT Pakistan, respond with EXACTLY and ONLY this text:
+   [OUT_OF_COUNTRY]
+
+5. ANSWERING LOGIC (For Pakistani property law questions ONLY):
    - ANSWER DIRECTLY. DO NOT prepend greetings, pleasantries, or introduce yourself. Skip phrases like "Assalamu alaikum" or "I am a legal assistant".
    - First, check if the provided <context> contains relevant information. If it does, USE IT as your primary reference and cite the case details provided.
    - If the <context> does NOT contain relevant information, seamlessly fallback and answer using your own general knowledge of Pakistani property law.
@@ -333,6 +336,12 @@ Answer:"""
             "I'm a **Pakistani property law assistant** and can only help with property-related queries — "
             "land, ownership, tenancy, transfer of property, mortgage, preemption, possession disputes, etc. "
             "For other legal matters like criminal or family law, please consult a relevant specialist.",
+            ""
+        )
+        
+    if "[OUT_OF_COUNTRY]" in answer:
+        return (
+            "I am a **Pakistani property law assistant**. I can only provide information and guidance regarding property laws, regulations, and cases within Pakistan. I cannot help with property matters in other countries.",
             ""
         )
 
