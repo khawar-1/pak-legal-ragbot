@@ -368,7 +368,7 @@ def _classify_vagueness(user_input: str, chat_history: list) -> dict:
     )
     is_situation_stmt = bool(SITUATION_STMT_RE.search(user_input))
     has_question_signal = any(q in user_input.lower() for q in QUESTION_SIGNALS)
-    if is_situation_stmt and not has_question_signal and len(words) < 15 and not has_history:
+    if is_situation_stmt and not has_question_signal and len(words) < 15:
         logger.info("Vagueness: situation statement without specific legal question.")
         return {"is_vague": True, "reason": "situation_statement"}
 
