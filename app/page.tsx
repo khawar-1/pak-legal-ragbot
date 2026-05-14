@@ -84,9 +84,70 @@ interface ChatMessage {
   text: string;
   answer?: string;
   timestamp?: Date;
+  followUpOptions?: string[];     // option strings from bot clarification
+  isClarification?: boolean;      // true = bot is asking for clarification
 }
 
-function ChatMessageComponent({ sender, text, answer, timestamp }: ChatMessage) {
+function FollowUpOptions({
+  options,
+  onSelect,
+}: {
+  options: string[];
+  onSelect: (opt: string) => void;
+}) {
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1.5 }}>
+      <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)", px: 1 }}>
+        Select what you meant:
+      </Typography>
+      {options.map((opt, i) => (
+        <Paper
+          key={i}
+          onClick={() => onSelect(opt)}
+          sx={{
+            p: 1.5,
+            px: 2,
+            bgcolor: "rgba(26, 71, 42, 0.15)",
+            border: "1px solid rgba(76, 175, 80, 0.35)",
+            borderRadius: 2,
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              bgcolor: "rgba(26, 71, 42, 0.35)",
+              borderColor: "#4caf50",
+              transform: "translateX(6px)",
+              boxShadow: "0 4px 12px rgba(76,175,80,0.2)",
+            },
+          }}
+        >
+          <Typography variant="body2" color="white">
+            <Box
+              component="span"
+              sx={{
+                display: "inline-block",
+                width: 22,
+                height: 22,
+                lineHeight: "22px",
+                textAlign: "center",
+                bgcolor: "rgba(76,175,80,0.2)",
+                borderRadius: "50%",
+                mr: 1.5,
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#4caf50",
+              }}
+            >
+              {i + 1}
+            </Box>
+            {opt}
+          </Typography>
+        </Paper>
+      ))}
+    </Box>
+  );
+}
+
+function ChatMessageComponent({ sender, text, answer, timestamp, followUpOptions, isClarification, onOptionSelect }: ChatMessage & { onOptionSelect?: (opt: string) => void }) {
   const isAI = sender === "AI";
 
   return (
@@ -157,20 +218,29 @@ function ChatMessageComponent({ sender, text, answer, timestamp }: ChatMessage) 
                     elevation={2}
                     sx={{
                       borderRadius: "18px 18px 18px 4px",
-                      bgcolor: "rgba(26, 71, 42, 0.15)",
+                      bgcolor: isClarification
+                        ? "rgba(255, 152, 0, 0.08)"
+                        : "rgba(26, 71, 42, 0.15)",
                       color: "white",
-                      boxShadow: "0 4px 12px rgba(26, 71, 42, 0.2)",
-                      border: "1px solid rgba(26, 71, 42, 0.3)",
+                      boxShadow: isClarification
+                        ? "0 4px 12px rgba(255,152,0,0.15)"
+                        : "0 4px 12px rgba(26, 71, 42, 0.2)",
+                      border: isClarification
+                        ? "1px solid rgba(255,152,0,0.3)"
+                        : "1px solid rgba(26, 71, 42, 0.3)",
                     }}
                   >
                     <CardContent sx={{ p: 2 }}>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-                        <Psychology sx={{ fontSize: 20, color: "#4caf50" }} />
+                        <Psychology sx={{ fontSize: 20, color: isClarification ? "#ff9800" : "#4caf50" }} />
                         <Typography variant="subtitle2" fontWeight={600} color="white">
-                          Analysis
+                          {isClarification ? "Clarification Needed" : "Analysis"}
                         </Typography>
                       </Box>
                       <Box>{formatText(text)}</Box>
+                      {isClarification && followUpOptions && followUpOptions.length > 0 && onOptionSelect && (
+                        <FollowUpOptions options={followUpOptions} onSelect={onOptionSelect} />
+                      )}
                     </CardContent>
                   </Card>
                 )}
@@ -269,8 +339,10 @@ export default function Home() {
 
       const chatMessage: ChatMessage = {
         sender: "AI",
-        text: data.question_analysis || "",
-        answer: data.answer || "",
+        text: data.question_analysis || data.answer || "",
+        answer: data.is_clarification_needed ? undefined : (data.answer || ""),
+        followUpOptions: data.follow_up_options || [],
+        isClarification: data.is_clarification_needed || false,
         timestamp: new Date(),
       };
 
@@ -288,19 +360,23 @@ export default function Home() {
     }
   };
 
-  const handleSend = () => {
-    if (!message.trim() || isLoading) return;
-
-    const userMessage = message.trim();
+  // Send a message programmatically (used by option chips)
+  const sendMessage = (text: string) => {
+    if (isLoading) return;
     const userMessageObj: ChatMessage = {
       sender: "User",
-      text: userMessage,
-      timestamp: new Date()
+      text,
+      timestamp: new Date(),
     };
-
     setChatHistory((prev) => [...prev, userMessageObj]);
+    fetchResponse(text);
+  };
+
+  const handleSend = () => {
+    if (!message.trim() || isLoading) return;
+    const userMessage = message.trim();
+    sendMessage(userMessage);
     setMessage("");
-    fetchResponse(userMessage);
   };
 
   const handleKeyPress = (event: React.KeyboardEvent) => {
@@ -423,7 +499,11 @@ export default function Home() {
           )}
 
           {chatHistory.map((msg, index) => (
-            <ChatMessageComponent key={index} {...msg} />
+            <ChatMessageComponent
+              key={index}
+              {...msg}
+              onOptionSelect={msg.isClarification ? (opt) => sendMessage(opt) : undefined}
+            />
           ))}
 
           {isLoading && (

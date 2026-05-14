@@ -34,3 +34,8 @@ class SessionDocument(BaseModel):
     is_complete: bool = False
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     last_updated: str = Field(default_factory=lambda: datetime.now().isoformat())
+    # Follow-up clarification state
+    pending_clarification: bool = False
+    clarification_context: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    # clarification_context shape:
+    # { "original_query": str, "options_offered": List[str], "round": int }

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 class ChatRequest(BaseModel):
     user_input: str
@@ -18,3 +18,5 @@ class ChatResponse(BaseModel):
     answer: Optional[str] = None
     tips: Optional[str] = None
     session_id: Optional[str] = None
+    follow_up_options: List[str] = []       # non-empty when clarification needed
+    is_clarification_needed: bool = False   # True = bot asked for clarification

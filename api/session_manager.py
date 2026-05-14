@@ -228,5 +228,82 @@ class SessionManager:
             logger.error(f"Error getting requirements: {e}")
             return {}
 
+    # ── Clarification state helpers ────────────────────────────────────────────
+
+    async def set_pending_clarification(
+        self,
+        session_id: str,
+        original_query: str,
+        options: list,
+        current_round: int = 1,
+    ):
+        """Store clarification state when the bot asks for clarification."""
+        try:
+            collection = self._get_collection()
+            if collection is None:
+                logger.debug("Stateless mode: clarification state not persisted")
+                return
+            await collection.update_one(
+                {"session_id": session_id},
+                {
+                    "$set": {
+                        "pending_clarification": True,
+                        "clarification_context": {
+                            "original_query": original_query,
+                            "options_offered": options,
+                            "round": current_round,
+                        },
+                        "last_updated": datetime.now().isoformat(),
+                    }
+                },
+            )
+            logger.info(f"Set pending clarification for session {session_id} (round {current_round})")
+        except Exception as e:
+            logger.error(f"Error setting pending clarification: {e}")
+
+    async def clear_pending_clarification(self, session_id: str):
+        """Reset clarification state once the user gives a clear answer."""
+        try:
+            collection = self._get_collection()
+            if collection is None:
+                return
+            await collection.update_one(
+                {"session_id": session_id},
+                {
+                    "$set": {
+                        "pending_clarification": False,
+                        "clarification_context": {},
+                        "last_updated": datetime.now().isoformat(),
+                    }
+                },
+            )
+            logger.info(f"Cleared pending clarification for session {session_id}")
+        except Exception as e:
+            logger.error(f"Error clearing pending clarification: {e}")
+
+    async def get_clarification_state(self, session_id: str) -> Dict[str, Any]:
+        """
+        Return the clarification state for a session.
+        Shape: { "pending": bool, "original_query": str,
+                 "options_offered": List[str], "round": int }
+        """
+        try:
+            session = await self.get_session(session_id)
+            if not session:
+                return {"pending": False, "original_query": "", "options_offered": [], "round": 0}
+            pending = session.get("pending_clarification", False)
+            ctx = session.get("clarification_context") or {}
+            return {
+                "pending": pending,
+                "original_query": ctx.get("original_query", ""),
+                "options_offered": ctx.get("options_offered", []),
+                "round": ctx.get("round", 0),
+            }
+        except Exception as e:
+            logger.error(f"Error getting clarification state: {e}")
+            return {"pending": False, "original_query": "", "options_offered": [], "round": 0}
+
+
+
 # Global session manager instance
 session_manager = SessionManager()

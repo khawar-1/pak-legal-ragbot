@@ -141,6 +141,13 @@ async def chat(request: ChatRequest) -> ChatResponse:
             except Exception as hist_err:
                 logger.warning(f"Could not fetch chat history: {hist_err}")
 
+            # Fetch clarification state BEFORE adding the current user message
+            clarification_state = {}
+            try:
+                clarification_state = await session_manager.get_clarification_state(session_id)
+            except Exception as cs_err:
+                logger.warning(f"Could not fetch clarification state: {cs_err}")
+
             # Add current user message to session (after history is captured)
             await session_manager.add_message(
                 session_id=session_id,
@@ -151,6 +158,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         except Exception as db_err:
             logger.warning(f"MongoDB unavailable, running in stateless mode: {db_err}")
             chat_history = []
+            clarification_state = {}
             # Continue without session persistence
 
         # Handle legal query using RAG system
@@ -158,7 +166,8 @@ async def chat(request: ChatRequest) -> ChatResponse:
             user_input=request.user_input,
             intent_classification=intent_classification,
             session_id=session_id,
-            chat_history=chat_history
+            chat_history=chat_history,
+            clarification_state=clarification_state,
         )
             
     except Exception as e:
@@ -183,33 +192,52 @@ async def handle_legal_query(
     user_input: str,
     intent_classification: IntentClassification,
     session_id: str,
-    chat_history: list = []
+    chat_history: list = [],
+    clarification_state: dict = {},
 ) -> ChatResponse:
     """Handle legal-related queries using RAG system"""
     try:
-        # Use RAG system for legal queries — single LLM call only
-        answer, context = retrieval(user_input, chat_history=chat_history)
+        # Use RAG system — returns 4-tuple now
+        answer, context, options, is_vague = retrieval(
+            user_input,
+            chat_history=chat_history,
+            clarification_state=clarification_state,
+        )
 
-        
+        # Update clarification state in session
+        try:
+            if is_vague:
+                current_round = clarification_state.get("round", 0) + 1
+                await session_manager.set_pending_clarification(
+                    session_id=session_id,
+                    original_query=user_input,
+                    options=options,
+                    current_round=current_round,
+                )
+            else:
+                await session_manager.clear_pending_clarification(session_id)
+        except Exception as cs_err:
+            logger.warning(f"Could not update clarification state: {cs_err}")
+
         # Save AI response to session
         await session_manager.add_message(
             session_id=session_id,
             sender="AI",
             message=answer,
-            response_type="legal_query_response"
+            response_type="clarification_needed" if is_vague else "legal_query_response",
         )
-        
-        response = ChatResponse(
+
+        return ChatResponse(
             intent_classification=intent_classification,
-            response_type="legal_query_response",
+            response_type="clarification_needed" if is_vague else "legal_query_response",
             question_analysis="",
             answer=answer,
             tips="",
-            session_id=session_id
+            session_id=session_id,
+            follow_up_options=options,
+            is_clarification_needed=is_vague,
         )
-        
-        return response
-        
+
     except Exception as e:
         logger.error(f"Error in legal query handler: {e}")
         return ChatResponse(
@@ -218,5 +246,7 @@ async def handle_legal_query(
             question_analysis=f"Error processing legal query: {str(e)}",
             answer="I apologize, but I encountered an error while processing your legal question. Please try rephrasing your question.",
             tips="Make sure to ask specific questions about legal cases, statutes, or legal principles.",
-            session_id=session_id
+            session_id=session_id,
+            follow_up_options=[],
+            is_clarification_needed=False,
         )
