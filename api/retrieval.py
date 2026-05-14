@@ -280,6 +280,9 @@ STRICT INSTRUCTIONS: Choose EXACTLY ONE of the following paths based on the user
 
 5. ANSWERING LOGIC (For Pakistani property law ONLY):
    - ANSWER DIRECTLY. DO NOT prepend greetings, pleasantries, or introduce yourself.
+   - OMIT ALL meta-commentary. DO NOT explain your reasoning, process, or mention whether you are using provided context or your own general knowledge.
+   - START your response immediately with the relevant legal information.
+   - DO NOT mention the <context> tags or refer to "provided information" or "my knowledge base".
    - First, check if the provided <context> contains relevant information. If it does, USE IT as your primary reference and cite the case details provided.
    - If the <context> does NOT contain relevant information, fallback and answer using your own general knowledge of Pakistani property law. Do NOT use Indian, UK, or other foreign laws.
    - Provide a DETAILED and COMPREHENSIVE answer spanning around 2-3 paragraphs.
@@ -293,6 +296,16 @@ Answer:"""
     # Strip any leaked format tags the LLM may prefix its answer with
     answer = re.sub(r'^\s*\[CHIT-CHAT\]\s*', '', answer, flags=re.IGNORECASE).strip()
     answer = re.sub(r'^\s*\[ANSWER\]\s*', '', answer, flags=re.IGNORECASE).strip()
+
+    # Proactively strip common meta-commentary about context/knowledge source
+    forbidden_intros = [
+        r"Since the user's question is related to property law.*general knowledge.*",
+        r"I will answer using my general knowledge.*",
+        r"The provided context does not contain.*",
+        r"Based on the provided information.*",
+    ]
+    for pattern in forbidden_intros:
+        answer = re.sub(pattern, "", answer, flags=re.IGNORECASE | re.DOTALL).strip()
 
     if "[UNSAFE]" in answer:
         return "I cannot fulfill that request. Please keep questions respectful, ethical, and within the boundaries of the law."
