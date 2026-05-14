@@ -1,0 +1,59 @@
+INFO:api.retrieval:MODE 2: Always searching FAISS first...
+INFO:api.retrieval:Loading existing FAISS vector database from disk...
+INFO:faiss.loader:Loading faiss with AVX512 support.
+INFO:faiss.loader:Could not load library with AVX512 support due to:
+ModuleNotFoundError("No module named 'faiss.swigfaiss_avx512'")
+INFO:faiss.loader:Loading faiss with AVX2 support.
+INFO:faiss.loader:Successfully loaded faiss with AVX2 support.
+INFO:api.retrieval:Calling Groq LLM (Master prompt)...
+INFO:httpx:HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:api.retrieval:MODE 2: Always searching FAISS first...
+INFO:api.retrieval:Loading existing FAISS vector database from disk...
+INFO:api.retrieval:Calling Groq LLM (Master prompt)...
+INFO:httpx:HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:api.retrieval:MODE 2: Always searching FAISS first...
+INFO:api.retrieval:Loading existing FAISS vector database from disk...
+INFO:api.retrieval:Calling Groq LLM (Master prompt)...
+INFO:httpx:HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:api.retrieval:MODE 2: Always searching FAISS first...
+INFO:api.retrieval:Loading existing FAISS vector database from disk...
+INFO:api.retrieval:Calling Groq LLM (Master prompt)...
+INFO:httpx:HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+
+Query: Tell me about property law.
+----------------------------------------
+Answer:
+To provide a comprehensive answer about property law in Pakistan, it's essential to understand the various aspects that govern this domain. Property law encompasses a broad range of topics including ownership, transfer of property, mortgages, preemption, possession disputes, and evacuee property, among others. The context provided touches upon several key concepts, including the rights of buyers and sellers as outlined in the Transfer of Property Act, 1882, and the definition and handling of evacuee property as per the Administration of Evacuee Property Act.
+
+The Transfer of Property Act, 1882, is a fundamental legislation that regulates the transfer of property in Pakistan. Section 55 of this Act is particularly relevant as it enumerates the rights and liabilities of buyers and sellers. For instance, section 55(6) creates a charge in favor of a buyer to the extent of the seller's interest in the property for the money paid in anticipation of delivery. This charge is not a mortgage but confers a right on the buyer to receive payment out of the specified property, which can be enforced by sale of the property, similar to a simple mortgage. The case of Muhammad Iqbal v. Additional Settlement Commissioner (PLD 1971 SC 318) sheds light on the nature of the charge created under section 55(4) of the Transfer of Property Act, highlighting its distinction from a simple vendor's lien and its enforceability through sale of the property.
+
+Regarding evacuee property, the Administration of Evacuee Property Act defines "evacuee property" as any property in which an evacuee has any right or interest. This definition is broad and includes not just full ownership but any tangible interest an evacuee may have in the property. The case of Muhammad Ramzan and others v. Custodian of Evacuee Property and others (2000 YLR 2452) illustrates this point, where it was held that even if an evacuee had only a possessory title to the land before migration, the property would still be considered evacuee property. This highlights the importance of understanding the legal status of properties, especially in the context of evacuee properties, to navigate the complexities of property law in Pakistan effectively. 
+
+Given the broad nature of your question, could you please specify whether you are inquiring about a particular aspect of property law, such as inheritance, sale, or disputes related to evacuee property? Are you dealing with a specific case or scenario that involves Pakistani property law?
+
+Query: I have a land dispute.
+----------------------------------------
+Answer:
+To address your land dispute effectively, it's crucial to understand the specifics of your situation. Are you involved in a dispute over the ownership of the land, or is it related to a tenancy issue? Perhaps it involves a matter of preemption or a boundary dispute with a neighboring property? Additionally, have you or the other parties involved taken any legal actions or filed any cases in court regarding this dispute? Knowing these details will help in providing a more accurate and relevant guidance based on Pakistani property law. 
+
+Given the context provided, which includes references to cases such as LALL ZAMAN (APPELLANT) VERSUS SAFDAR ALI KHAN RESPONDENT and GHULAM NABI AND 12 OTHERS (APPELLANTS) VERSUS CUSTODIAN OF EVACUEE PROPERTY AND 10 OTHERS RESPONDENTS, it seems that issues related to the description and identification of property, as well as the role of custodians in evacuee property, have been addressed in legal precedents. For instance, in the case of LALL ZAMAN (APPELLANT) VERSUS SAFDAR ALI KHAN RESPONDENT, the court's decision was based on the description of the disputed property and the lack of objection from the defendant-appellant regarding this description. This highlights the importance of clear property descriptions in legal proceedings.
+
+If your dispute involves evacuee property, as hinted at in the case of GHULAM NABI AND 12 OTHERS (APPELLANTS) VERSUS CUSTODIAN OF EVACUEE PROPERTY AND 10 OTHERS RESPONDENTS, it's essential to understand the legal framework surrounding such properties. The Administration of Evacuee Property Act provides guidelines on how to handle claims and disputes related to evacuee properties, including the role of the Custodian and the process for preferring claims. Section 22 of the Act allows any person claiming a right or interest in any property treated as evacuee property to prefer a claim to the Custodian. Furthermore, section 41 of the Act bars the jurisdiction of civil or revenue courts in matters related to evacuee properties, emphasizing the exclusive jurisdiction of the Custodian and related authorities in such cases.
+
+Query: What is pre-emption in Pakistani law?
+----------------------------------------
+Answer:
+Pre-emption in Pakistani law refers to the right of a person to purchase a property in preference to others, typically in cases where the property is being sold. This right is governed by the Pre-emption Act, 1990, and is applicable to agricultural land, as well as other types of properties in certain circumstances. The concept of pre-emption is based on the idea that a person who has a prior interest in a property, such as a neighbor or a co-sharer, should have the first opportunity to purchase the property if it is being sold.
+
+According to the Pre-emption Act, 1990, a person who has a right of pre-emption can exercise this right if they are a co-sharer in the property, a neighbor, or a tenant of the property. The right of pre-emption can be exercised in cases where the property is being sold, gifted, or otherwise transferred. The person exercising the right of pre-emption must do so within a specified period, typically 30 days, from the date of the sale or transfer. If the person exercising the right of pre-emption is unable to pay the full purchase price, they may be required to deposit a portion of the price and provide security for the remaining amount.
+
+It is worth noting that the right of pre-emption is not absolute and can be restricted or excluded in certain circumstances. For example, if the property is being sold to a person who is not a citizen of Pakistan, the right of pre-emption may not apply. Additionally, if the property is being sold through a court auction, the right of pre-emption may be limited or excluded. In cases where the right of pre-emption is disputed, the matter may be taken to court for resolution. The court will consider the specific circumstances of the case and apply the relevant provisions of the Pre-emption Act, 1990, to determine whether the right of pre-emption has been validly exercised.
+
+Query: Explain case 2008 CLC 332
+----------------------------------------
+Answer:
+The case of 2008 CLC 332, Muhammad Mukhtar Khan and others versus Muhammad Sadiq and others, revolves around the concept of preemption in Pakistani property law. The plaintiff, Muhammad Sadiq, filed a suit for possession on the basis of preemption against the defendants, Muhammad Mukhtar Khan and others, who had purchased a piece of land from Muhammad Mansha Khan. The trial court disallowed the suit, but the district judge reversed the decision, decreeing the suit in favor of the plaintiff. The defendants then appealed to the higher court, challenging the district judge's decision.
+
+The main issue in this case is the application of the doctrine of "sinker" and the amendment in section 20-A of the Prior Purchase Act. The doctrine of sinker states that if a purchaser associates with himself in the purchase a person with inferior rights, he is deemed to have sunk down to the level of his associate and cannot resist preemption. In this case, Muhammad Mansha Khan had associated with two strangers, Muhammad Mukhtar Khan and Muhammad Akram Khan, who were not co-sharers in the property at the time of the sale deed. The court held that by doing so, Muhammad Mansha Khan had sunk down to the level of his associates and could not resist preemption, even with regard to his own share of the purchase.
+
+The court also considered the amendment in section 20-A of the Prior Purchase Act, which was introduced through Ordinance XXI of 1998. The amendment applies to cases where the status of the vendee has been improved during the pendency of the preemption suit. In this case, Muhammad Mukhtar Khan and Muhammad Akram Khan had improved their status by purchasing a piece of land from Muhammad Mansha Khan during the pendency of the suit. The court held that this transfer was hit by the amendment in section 20-A and could not be used to resist preemption. Therefore, the court dismissed the appeal and upheld the district judge's decision, allowing the plaintiff to deposit the decretal amount in the trial court within two months.
