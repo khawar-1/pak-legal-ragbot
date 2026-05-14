@@ -396,24 +396,36 @@ def _generate_clarification_question(
 ) -> str:
     """Generate a natural follow-up question to clarify a vague query."""
     if llm is None:
-        llm = ChatGroq(api_key=GROQ_API_KEY, model=GROQ_MODEL, temperature=0.5, max_tokens=200)
+        llm = ChatGroq(api_key=GROQ_API_KEY, model=GROQ_MODEL, temperature=0.0, max_tokens=150)
 
     history_block = _format_history_block(chat_history)
 
     prompt = (
         f"You are a Pakistani property law assistant.\n"
-        f"The user's message is too vague to provide a specific legal answer. \n"
-        f"Vagueness reason: {reason}.\n"
+        f"The user sent a vague message. Ask them ONE short follow-up question to understand their issue.\n"
         f"{history_block}"
         f"User's message: \"{user_input}\"\n\n"
-        f"STRICT INSTRUCTIONS:\n"
-        f"- Generate ONE natural, helpful follow-up question to understand what they need.\n"
-        f"- The question should be tailored to their message. (e.g. if they say 'dispute', ask 'What is the dispute about?').\n"
-        f"- End the response with the phrase: 'I want to make sure I give you the right information.'\n"
-        f"- Output ONLY the question. No extra text, no greetings."
+        f"STRICT RULES — violating any rule makes the output unusable:\n"
+        f"1. Write ONLY a single sentence question. No lists. No bullet points. No numbering.\n"
+        f"2. Do NOT write 'Are you asking about:' or 'Just pick one' or give any options.\n"
+        f"3. Tailor the question to what they said. (e.g. 'dispute' → 'Could you tell me more about the nature of the dispute?')\n"
+        f"4. End with: 'I want to make sure I give you the right information.'\n"
+        f"5. Output nothing except the question itself."
     )
     response = llm.invoke(prompt)
-    return response.content.strip()
+    question = response.content.strip()
+
+    # Safety net: strip any bullet/numbered list lines the LLM generates anyway
+    question = re.sub(r'\n\s*[-*•]\s+.*', '', question).strip()
+    question = re.sub(r'\n\s*\d+\.\s+.*', '', question).strip()
+    # Strip the classic old template phrases in case of cache/old session bleed
+    question = re.sub(r'Are you asking about:?', '', question, flags=re.IGNORECASE).strip()
+    question = re.sub(r'Just pick one or tell me in your own words\.?', '', question, flags=re.IGNORECASE).strip()
+    # If somehow still empty, use a safe fallback
+    if not question:
+        question = f"Could you tell me more about your situation? I want to make sure I give you the right information."
+
+    return question
 
 
 # Removed _build_clarification_message as we now use natural LLM questions.
