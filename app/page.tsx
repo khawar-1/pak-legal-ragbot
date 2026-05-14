@@ -337,12 +337,16 @@ export default function Home() {
 
       const data = await res.json();
 
+      const isClarification = data.is_clarification_needed || false;
+
       const chatMessage: ChatMessage = {
         sender: "AI",
-        text: data.question_analysis || data.answer || "",
-        answer: data.is_clarification_needed ? undefined : (data.answer || ""),
+        // Clarification message → show in Analysis card (orange)
+        // Normal answer        → show only in Legal Answer card (green), Analysis stays empty
+        text: isClarification ? (data.answer || "") : "",
+        answer: isClarification ? undefined : (data.answer || ""),
         followUpOptions: data.follow_up_options || [],
-        isClarification: data.is_clarification_needed || false,
+        isClarification,
         timestamp: new Date(),
       };
 

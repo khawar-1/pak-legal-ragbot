@@ -270,7 +270,7 @@ STRICT INSTRUCTIONS: Choose EXACTLY ONE of the following paths based on the user
 1. SAFETY FILTER: If the user's question asks for anything harmful, unethical, illegal, or inappropriate, respond with EXACTLY and ONLY this text:
    [UNSAFE]
 
-2. CHIT-CHAT: If the question is pure conversational pleasantry (e.g., "Hi", "Hello", "How are you?"), answer politely and briefly in character. Do not provide legal advice here.
+2. CHIT-CHAT: If the question is pure conversational pleasantry (e.g., "Hi", "Hello", "How are you?"), respond warmly and briefly in character as a legal assistant. Do NOT output any tag or label — just write the response directly.
 
 3. DOMAIN STRICT FILTER: If the user asks a legal question NOT related to property law (e.g., criminal law, family law), respond with EXACTLY and ONLY this text:
    [OUT_OF_DOMAIN]
@@ -289,6 +289,10 @@ Answer:"""
 
     response = llm.invoke(master_prompt)
     answer = response.content.strip()
+
+    # Strip any leaked format tags the LLM may prefix its answer with
+    answer = re.sub(r'^\s*\[CHIT-CHAT\]\s*', '', answer, flags=re.IGNORECASE).strip()
+    answer = re.sub(r'^\s*\[ANSWER\]\s*', '', answer, flags=re.IGNORECASE).strip()
 
     if "[UNSAFE]" in answer:
         return "I cannot fulfill that request. Please keep questions respectful, ethical, and within the boundaries of the law."
@@ -318,11 +322,13 @@ def _classify_vagueness(user_input: str, chat_history: list) -> dict:
     Returns: { "is_vague": bool, "reason": str | None }
 
     Rule priority (first match wins):
-    1. Domain short answer          → NOT vague
-    2. ≤ 3 words, no history        → vague  (too_short)
-    3. Pronoun + no legal kw + no history → vague  (ambiguous_pronoun)
-    4. No legal kw, < 8 words, no history → vague  (no_domain_keyword)
-    5. Anything else                → NOT vague
+    1. Domain short answer                        → NOT vague
+    2. ≤ 3 words, no history                     → vague  (too_short)
+    3. Pronoun + no legal kw + no history         → vague  (ambiguous_pronoun)
+    4. No legal kw, < 8 words, no history         → vague  (no_domain_keyword)
+    5. Personal situation statement with no       → vague  (situation_statement)
+       specific legal question, no history
+    6. Anything else                              → NOT vague
     """
     if _is_domain_short_answer(user_input):
         logger.info("Vagueness: domain term → answering directly.")
@@ -344,6 +350,27 @@ def _classify_vagueness(user_input: str, chat_history: list) -> dict:
     if not has_legal_kw and len(words) < 8 and not has_history:
         logger.info("Vagueness: no domain keyword in short query.")
         return {"is_vague": True, "reason": "no_domain_keyword"}
+
+    # Rule 5: Personal situation statement with legal keywords but no specific legal question.
+    # e.g. "I have dispute over land", "My property is taken", "We have a problem with tenant"
+    # These describe a situation but don't ask what they need legally — must clarify.
+    QUESTION_SIGNALS = [
+        "how", "what", "when", "where", "who", "which", "why",
+        "can i", "could i", "should i", "is it", "are there",
+        "do i", "will i", "am i", "please explain", "tell me",
+        "explain", "define", "describe",
+    ]
+    SITUATION_STMT_RE = re.compile(
+        r'^\s*(i have|i had|i want|i need|i am|i got|i lost|'
+        r'my |we have|we had|we want|we need|our |'
+        r'my brother|my father|my mother|my sister|my land|my property)',
+        re.IGNORECASE,
+    )
+    is_situation_stmt = bool(SITUATION_STMT_RE.search(user_input))
+    has_question_signal = any(q in user_input.lower() for q in QUESTION_SIGNALS)
+    if is_situation_stmt and not has_question_signal and len(words) < 15 and not has_history:
+        logger.info("Vagueness: situation statement without specific legal question.")
+        return {"is_vague": True, "reason": "situation_statement"}
 
     return {"is_vague": False, "reason": None}
 
