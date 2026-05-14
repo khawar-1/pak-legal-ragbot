@@ -388,65 +388,35 @@ def _classify_vagueness(user_input: str, chat_history: list) -> dict:
     return {"is_vague": False, "reason": None}
 
 
-def _generate_options_via_llm(
+def _generate_clarification_question(
     user_input: str,
     chat_history: list,
     reason: str,
-    clarification_round: int = 1,
     llm=None,
-) -> List[str]:
-    """Generate 3 selectable option strings via Groq.
-
-    On round >= 2 (chained vagueness), returns a single simple open question instead.
-    """
+) -> str:
+    """Generate a natural follow-up question to clarify a vague query."""
     if llm is None:
-        llm = ChatGroq(api_key=GROQ_API_KEY, model=GROQ_MODEL, temperature=0.3, max_tokens=300)
+        llm = ChatGroq(api_key=GROQ_API_KEY, model=GROQ_MODEL, temperature=0.5, max_tokens=200)
 
     history_block = _format_history_block(chat_history)
 
-    if clarification_round >= 2:
-        prompt = (
-            f"You are a Pakistani property law assistant.\n"
-            f"The user has been unclear twice. Ask ONE very simple, direct question to understand what they need.\n"
-            f"User's latest message: \"{user_input}\"\n"
-            f"Output ONLY the question, nothing else."
-        )
-        response = llm.invoke(prompt)
-        return [response.content.strip()]
-
     prompt = (
         f"You are a Pakistani property law assistant.\n"
-        f"The user asked a vague property law question. Vagueness reason: {reason}.\n"
+        f"The user's message is too vague to provide a specific legal answer. \n"
+        f"Vagueness reason: {reason}.\n"
         f"{history_block}"
         f"User's message: \"{user_input}\"\n\n"
-        f"Generate EXACTLY 3 specific, short option phrases (NOT questions) that represent the most likely things the user could mean.\n"
-        f"Each option must be about a distinct property law topic.\n"
-        f"Format: one option per line, plain text only, no numbering, no bullet points, no extra text.\n"
-        f"Example format:\n"
-        f"Ownership or title dispute over land\n"
-        f"Landlord and tenant conflict or eviction\n"
-        f"Mortgage or property transfer issue"
+        f"STRICT INSTRUCTIONS:\n"
+        f"- Generate ONE natural, helpful follow-up question to understand what they need.\n"
+        f"- The question should be tailored to their message. (e.g. if they say 'dispute', ask 'What is the dispute about?').\n"
+        f"- End the response with the phrase: 'I want to make sure I give you the right information.'\n"
+        f"- Output ONLY the question. No extra text, no greetings."
     )
     response = llm.invoke(prompt)
-    options = [line.strip() for line in response.content.strip().split("\n") if line.strip()][:3]
-
-    if not options:
-        options = [
-            "Ownership or title dispute over land or property",
-            "Landlord-tenant conflict, rent, or eviction",
-            "Mortgage, transfer, or property registration issue",
-        ]
-    return options
+    return response.content.strip()
 
 
-def _build_clarification_message(options: List[str], clarification_round: int = 1) -> str:
-    """Build the clarification message shown to the user."""
-    if clarification_round >= 2 and len(options) == 1:
-        return f"I'm still not quite sure what you need. {options[0]}"
-    intro = "I want to make sure I give you the right information. Are you asking about:"
-    option_lines = "\n".join(f"- **{opt}**" for opt in options)
-    outro = "\nJust pick one or tell me in your own words."
-    return f"{intro}\n\n{option_lines}\n{outro}"
+# Removed _build_clarification_message as we now use natural LLM questions.
 
 
 def _resolve_option_selection(user_reply: str, options_offered: List[str]) -> str:
@@ -530,13 +500,11 @@ def retrieval(
         vagueness = _classify_vagueness(resolved_selection, chat_history)
         if vagueness["is_vague"] and current_round < 2:
             next_round = current_round + 1
-            options = _generate_options_via_llm(
-                user_input, chat_history, vagueness["reason"],
-                clarification_round=next_round, llm=llm,
+            question = _generate_clarification_question(
+                user_input, chat_history, vagueness["reason"], llm=llm,
             )
-            msg = _build_clarification_message(options, clarification_round=next_round)
             logger.info(f"MODE 0→2: User still vague, escalating to round {next_round}.")
-            return msg, "", options, True
+            return question, "", [], True
 
         # User gave a usable answer — run RAG on enriched query
         docs, context = _faiss_case_lookup(enriched_query)
@@ -566,12 +534,10 @@ def retrieval(
     vagueness = _classify_vagueness(user_input, chat_history)
     if vagueness["is_vague"]:
         logger.info(f"MODE 2: Vague query detected. Reason: {vagueness['reason']}")
-        options = _generate_options_via_llm(
-            user_input, chat_history, vagueness["reason"],
-            clarification_round=1, llm=llm,
+        question = _generate_clarification_question(
+            user_input, chat_history, vagueness["reason"], llm=llm,
         )
-        msg = _build_clarification_message(options, clarification_round=1)
-        return msg, "", options, True
+        return question, "", [], True
 
     # ── MODE 3: Master RAG pipeline ────────────────────────────────────────────
     logger.info("MODE 3: Searching FAISS and running master prompt...")
